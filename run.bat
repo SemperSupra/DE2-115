@@ -94,8 +94,13 @@ echo Detected Quartus project: !PROJECT_NAME!
 
 pushd %GATEWARE_DIR%
 echo Running Quartus synthesis (this may take a while)...
-call :log_and_exec "'%QUARTUS_PATH%\quartus_sh.exe' --flow compile !PROJECT_NAME!"
-set QUARTUS_EXIT=!errorlevel!
+>> %LOG_FILE% echo.
+>> %LOG_FILE% echo ------------------------------------------------------------
+>> %LOG_FILE% echo [EXEC] "%QUARTUS_PATH%\quartus_sh.exe" --flow compile !PROJECT_NAME!
+>> %LOG_FILE% echo [TIME] %TIME%
+>> %LOG_FILE% echo ------------------------------------------------------------
+"%QUARTUS_PATH%\quartus_sh.exe" --flow compile !PROJECT_NAME! >> %LOG_FILE% 2>&1
+set QUARTUS_EXIT=%errorlevel%
 popd
 if %QUARTUS_EXIT% neq 0 (
     echo [ERROR] Quartus synthesis failed.
