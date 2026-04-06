@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+.pytest_cache/
+*.pyc
+*.pyo
+
+# LiteX / Quartus generated output
+build/
+
+# Firmware build products
+firmware/src/*.o
+firmware/src/*.d
+firmware/src/*.elf
+firmware/src/*.bin
+firmware/src/Makefile
+
+# Downloaded vendor packages and extracted tooling
+Downloads/
+
+# Local evidence / operator workspace
+local_artifacts/
+
+# Vendor demo generated output
+DE2_115_demonstrations/**/.metadata/
+DE2_115_demonstrations/**/Debug/
+DE2_115_demonstrations/**/Release/
+DE2_115_demonstrations/**/obj/
+DE2_115_demonstrations/**/bin/
+DE2_115_demonstrations/**/*.sof
+DE2_115_demonstrations/**/*.pof
+DE2_115_demonstrations/**/*.jdi
+DE2_115_demonstrations/**/*.qws
+DE2_115_demonstrations/**/*.done
+DE2_115_demonstrations/**/*.smsg
+DE2_115_demonstrations/**/*.summary
+DE2_115_demonstrations/**/*.rpt
+DE2_115_demonstrations/**/*.map
+DE2_115_demonstrations/**/*.objdump
+DE2_115_demonstrations/**/*.pdb
+DE2_115_demonstrations/**/*.suo
+DE2_115_demonstrations/**/*.exe
+DE2_115_demonstrations/**/*.dll
+DE2_115_demonstrations/**/*.log
+DE2_115_demonstrations/**/*.html
+
+# Logs and local transcripts
+*.log
+
+# Board observation artifacts
+*.jpg
+*.jpeg
+*.mp4
+*.srt
+
+# OS/editor noise
+.DS_Store
+Thumbs.db

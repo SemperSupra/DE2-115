@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  litex_builder:
+    build: .
+    image: litex_de2_115:latest
+    container_name: litex_env
+    volumes:
+      - .:/workspace
+      # Mount Quartus Lite from the host (installed by the automated script)
+      - C:\intelFPGA_lite\22.1std:/opt/intelFPGA_lite
+    tty: true
+    stdin_open: true
+    command: /bin/bash
