@@ -1,0 +1,1 @@
+Working tree only divergence; no local commit range to compare.
