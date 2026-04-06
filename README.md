@@ -33,6 +33,17 @@ use the onboard USB OTG controller as a host for an external HID-class device.
 Helper scripts for host setup, firmware build, SoC build, and programming are in
 `scripts/`.
 
+## Local Artifact Policy
+
+Runtime artifacts such as screenshots, videos, subtitles, and host logs are kept
+under `local_artifacts/` for local use and are intentionally excluded from git.
+
+Large local reference trees such as `DE2_115_demonstrations/` and nested external
+repositories under `tools/` are also treated as local-only in this clone. That
+exclude policy currently lives in `.git/info/exclude`, so future clones should
+apply the same local excludes unless and until those trees are intentionally
+vendored into the repository.
+
 ## Immediate Engineering Goal
 
 Extract the LCP blob from the Terasic demonstration sources, load it into the

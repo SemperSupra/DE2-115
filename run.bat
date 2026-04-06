@@ -8,10 +8,13 @@ set QUARTUS_PATH=C:\intelFPGA_lite\22.1std\quartus\bin64
 set LOG_FILE=build.log
 
 :: Redirect all output to a log file while still showing it on screen
-echo ============================================================ > %LOG_FILE%
-echo --- DE2-115 LiteX Automation Root [%DATE% %TIME%] --- >> %LOG_FILE%
-echo ============================================================ >> %LOG_FILE%
-echo. >> %LOG_FILE%
+powershell -NoProfile -Command ^
+  "$lines = @(" ^
+  "'============================================================'," ^
+  "'--- DE2-115 LiteX Automation Root [%DATE% %TIME%] ---'," ^
+  "'============================================================'," ^
+  "''" ^
+  "); $lines | Out-File -FilePath '%LOG_FILE%' -Encoding utf8"
 
 echo --- DE2-115 LiteX Automation Root ---
 echo.
@@ -113,15 +116,15 @@ echo 2. Press RESET on board or enter 'reboot' in BIOS.
 echo.
 exit /b 0
 
-:: Helper function to execute a command, log output (TEE), and maintain exit code
+:: Helper function to execute a command, log output, and maintain exit code.
+:: PowerShell Tee-Object produced mixed encodings with some subprocesses.
 :log_and_exec
 set "RAW_CMD=%~1"
-echo. >> %LOG_FILE%
-echo ------------------------------------------------------------ >> %LOG_FILE%
-echo [EXEC] !RAW_CMD! >> %LOG_FILE%
-echo [TIME] %TIME% >> %LOG_FILE%
-echo ------------------------------------------------------------ >> %LOG_FILE%
+>> %LOG_FILE% echo.
+>> %LOG_FILE% echo ------------------------------------------------------------
+>> %LOG_FILE% echo [EXEC] !RAW_CMD!
+>> %LOG_FILE% echo [TIME] %TIME%
+>> %LOG_FILE% echo ------------------------------------------------------------
 
-:: Use PowerShell to TEE output. 
-powershell -Command "& { & !RAW_CMD! 2>&1 | Tee-Object -FilePath %LOG_FILE% -Append; exit $LASTEXITCODE }"
+call !RAW_CMD! >> %LOG_FILE% 2>&1
 exit /b %errorlevel%

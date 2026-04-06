@@ -70,13 +70,12 @@
 
 ### Observation Artifacts
 
-- `*.jpg`
-- `*.mp4`
-- `*.srt`
-- `*.log`
+- `local_artifacts/screenshots/`
+- `local_artifacts/videos/`
+- `local_artifacts/logs/`
   Purpose: Bring-up evidence. These files show board state, VGA output, LCD
-  output, and command transcripts. Useful for forensics, but not primary source
-  code.
+  output, captured sessions, and command transcripts. Useful for forensics, but
+  not primary source code.
 
 ## Execution Flow
 
@@ -133,5 +132,7 @@ If you are resuming work, read these in order:
 - Treat `build/` as generated output.
 - Treat `DE2_115_demonstrations/` and `Downloads/` as reference sources unless
   you are intentionally extracting data from them.
-- Preserve `.jpg`, `.mp4`, `.srt`, and `.log` files as evidence unless you are
-  explicitly cleaning artifacts.
+- Preserve `local_artifacts/` as local evidence unless you are explicitly
+  cleaning artifacts.
+- In this clone, `DE2_115_demonstrations/` and `tools/` are excluded via
+  `.git/info/exclude` to keep normal git status focused on project-owned files.

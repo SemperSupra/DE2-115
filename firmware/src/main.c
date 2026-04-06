@@ -14,7 +14,7 @@ const uint8_t hex_digits[] = {
     0x80, 0x90, 0x88, 0x83, 0xc6, 0xa1, 0x86, 0x8e
 };
 
-void display_hex(uint32_t val) {
+static void display_hex(uint32_t val) {
     hex1_out_write(hex_digits[(val >> 0) & 0xf]);
     hex2_out_write(hex_digits[(val >> 4) & 0xf]);
     hex3_out_write(hex_digits[(val >> 8) & 0xf]);
@@ -24,7 +24,7 @@ void display_hex(uint32_t val) {
     hex7_out_write(hex_digits[(val >> 24) & 0xf]);
 }
 
-void itoa_hex32(uint32_t n, char *s) {
+static void itoa_hex32(uint32_t n, char *s) {
     const char *hex = "0123456789ABCDEF";
     for(int i=0; i<8; i++) {
         s[7-i] = hex[(n >> (i*4)) & 0xF];
@@ -32,7 +32,7 @@ void itoa_hex32(uint32_t n, char *s) {
     s[8] = '\0';
 }
 
-void msleep(unsigned int ms) {
+static void msleep(unsigned int ms) {
     timer0_en_write(0);
     timer0_reload_write(0);
     timer0_load_write(CONFIG_CLOCK_FREQUENCY/1000 * ms);
@@ -48,7 +48,7 @@ void msleep(unsigned int ms) {
 #define LCD_RW    (1 << 3)
 #define LCD_RS    (1 << 4)
 
-void lcd_write_cmd(uint8_t cmd) {
+static void lcd_write_cmd(uint8_t cmd) {
     uint32_t val = LCD_ON | LCD_BLON | (((uint32_t)cmd) << 5);
     lcd_out_write(val);
     lcd_out_write(val | LCD_EN);
@@ -56,7 +56,7 @@ void lcd_write_cmd(uint8_t cmd) {
     msleep(2);
 }
 
-void lcd_write_data(uint8_t data) {
+static void lcd_write_data(uint8_t data) {
     uint32_t val = LCD_ON | LCD_BLON | LCD_RS | (((uint32_t)data) << 5);
     lcd_out_write(val);
     lcd_out_write(val | LCD_EN);
@@ -64,7 +64,7 @@ void lcd_write_data(uint8_t data) {
     msleep(2);
 }
 
-void lcd_init(void) {
+static void lcd_init(void) {
     lcd_out_write(LCD_ON | LCD_BLON);
     msleep(100);
     lcd_write_cmd(0x38);
@@ -81,13 +81,13 @@ void lcd_init(void) {
     lcd_write_cmd(0x0C);
 }
 
-void lcd_set_cursor(int row, int col) {
+static void lcd_set_cursor(int row, int col) {
     uint8_t addr = (row == 0) ? 0x00 : 0x40;
     addr += col;
     lcd_write_cmd(0x80 | addr);
 }
 
-void lcd_print(const char *str) {
+static void lcd_print(const char *str) {
     while (*str) {
         lcd_write_data((uint8_t)*str++);
     }
@@ -136,17 +136,17 @@ extern int sdram_init(void);
 #define A_DP_STAT              0x2000
 #define A_DM_STAT              0x1000
 
-void UsbWrite(uint16_t Address, uint16_t Data) {
+static void UsbWrite(uint16_t Address, uint16_t Data) {
     CY_HPI_ADDRESS = Address;
     CY_HPI_DATA = Data;
 }
 
-uint16_t UsbRead(uint16_t Address) {
+static uint16_t UsbRead(uint16_t Address) {
     CY_HPI_ADDRESS = Address;
     return CY_HPI_DATA & 0xFFFF;
 }
 
-void write_td(uint16_t td_addr, uint16_t next_td, uint16_t length, uint16_t addr_pid_ep, uint16_t toggle, uint16_t buf_addr) {
+static void write_td(uint16_t td_addr, uint16_t next_td, uint16_t length, uint16_t addr_pid_ep, uint16_t toggle, uint16_t buf_addr) {
     CY_HPI_ADDRESS = td_addr;
     CY_HPI_DATA = next_td;
     CY_HPI_DATA = length;
@@ -156,7 +156,7 @@ void write_td(uint16_t td_addr, uint16_t next_td, uint16_t length, uint16_t addr
     CY_HPI_DATA = buf_addr;
 }
 
-uint16_t execute_td_sync(uint16_t td_addr) {
+static uint16_t execute_td_sync(uint16_t td_addr) {
     // Clear any pending message
     uint32_t status = CY_HPI_STATUS;
     if (status & (1 << 4)) {
@@ -294,7 +294,7 @@ int main(void) {
                 
                 CY_HPI_ADDRESS = 0x0520;
                 uint16_t d0 = CY_HPI_DATA & 0xFFFF;
-                uint16_t d1 = CY_HPI_DATA & 0xFFFF;
+                (void)CY_HPI_DATA;
                 
                 if (d0 != 0 && d0 != last_data[ep]) {
                     last_data[ep] = d0;
