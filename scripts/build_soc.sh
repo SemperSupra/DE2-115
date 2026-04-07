@@ -2,9 +2,9 @@
 set -e
 
 # Target configuration
-TARGET_PATH="/workspace/de2_115_vga_target.py"
-GATEWARE_DIR="/workspace/build/terasic_de2_115/gateware"
-FIRMWARE_BIN="/workspace/firmware/src/demo.bin"
+TARGET_PATH="$(pwd)/de2_115_vga_target.py"
+GATEWARE_DIR="$(pwd)/build/terasic_de2_115/gateware"
+FIRMWARE_BIN="$(pwd)/firmware/src/demo.bin"
 
 echo "--- Stage 1: Generating Software Headers ---"
 python3 $TARGET_PATH
