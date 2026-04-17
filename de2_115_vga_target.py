@@ -269,6 +269,7 @@ if __name__ == "__main__":
 
     soc_kwargs = {}
     if args.with_firmware:
+        soc_kwargs["integrated_rom_size"] = 0x20000
         soc_kwargs["integrated_rom_init"] = get_mem_data(args.with_firmware, endianness="little")
 
     soc = DE2_115VGAMaster(**soc_kwargs)

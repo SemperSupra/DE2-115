@@ -525,47 +525,79 @@ static void vga_mdio_debug(uint8_t addr, uint8_t reg) {
 }
 
 static void vga_eth_diag(void) {
-    int start_row = 18;
+    int start_row = 17;
+    uint8_t phys[] = {16, 17};
+    const char *labels[] = {"CR", "SR", "ID1", "ID2", "ANA", "LPA", "ANE", "MST", "MS", "ES", "EPC", "EPS", "27"};
+    int reg_map[] = {0, 1, 2, 3, 4, 5, 6, 9, 10, 15, 16, 17, 27};
+
+    vga_clear_line(start_row - 1);
+    uint32_t inband = ethphy_rx_inband_status_read();
+    vga_puts_xy(start_row - 1, 0, "INBAND:");
+    vga_put_hex32_xy(start_row - 1, 8, inband);
     
-    // Scan for PHYs
-    uint8_t found_phys[32];
-    int num_phys = 0;
-    for (int i = 0; i < 32; i++) {
-        uint16_t id1 = mdio_read(i, 2);
-        if (id1 != 0x0000 && id1 != 0xFFFF) {
-            found_phys[num_phys++] = i;
+    for (int p = 0; p < 2; p++) {
+        uint8_t addr = phys[p];
+        int row = start_row + (p * 6);
+        vga_clear_line(row);
+        vga_puts_xy(row, 0, "PHY ");
+        vga_put_hex16_xy(row, 4, addr);
+        
+        mdio_read(addr, 1); // Clear latch
+        uint16_t sr = mdio_read(addr, 1);
+        uint16_t ms = mdio_read(addr, 17);
+        uint16_t r27 = mdio_read(addr, 27);
+        
+        vga_puts_xy(row, 10, (sr & 0x0004) ? "LINK UP  " : "LINK DOWN");
+        vga_puts_xy(row, 20, (r27 & 0x0008) ? "FIBER" : "COPPER");
+        vga_puts_xy(row, 30, (ms & 0x4000) ? "1000M" : "10/100");
+
+        for (int i = 0; i < 13; i++) {
+            uint16_t val = mdio_read(addr, reg_map[i]);
+            int r = row + 1 + (i / 4);
+            int col = (i % 4) * 20;
+            if (i % 4 == 0) vga_clear_line(r);
+            vga_puts_xy(r, col, labels[i]);
+            vga_puts_xy(r, col + 3, ":");
+            vga_put_hex16_xy(r, col + 4, val);
+        }
+    }
+}
+
+static void usb_timing_sweep(void) {
+    static uint8_t cur_cycles = 10;
+    static uint8_t cur_offset = 2;
+    static uint16_t best_val = 0;
+    static uint8_t best_c = 0, best_o = 0;
+
+    // Fast sweep through reasonable ranges
+    for (int i = 0; i < 10; i++) {
+        bridge_apply_cfg(1, 1, cur_cycles, cur_offset, 8);
+        uint16_t val = hpi_read_reg16(&CY_HPI_STATUS);
+        
+        if (val != 0x0000 && val != 0xFFFF) {
+            best_val = val;
+            best_c = cur_cycles;
+            best_o = cur_offset;
+        }
+
+        cur_offset++;
+        if (cur_offset >= cur_cycles - 1) {
+            cur_offset = 1;
+            cur_cycles++;
+            if (cur_cycles > 63) cur_cycles = 10;
         }
     }
 
-    vga_clear_line(start_row - 1);
-    vga_puts_xy(start_row - 1, 0, "PHYS FOUND:");
-    for (int i = 0; i < num_phys; i++) {
-        vga_put_hex16_xy(start_row - 1, 12 + i*5, found_phys[i]);
-    }
-    
-    // In-band status
-    uint32_t inband = ethphy_rx_inband_status_read();
-    vga_puts_xy(start_row - 1, 30, "INBAND:");
-    vga_put_hex32_xy(start_row - 1, 38, inband);
-
-    uint8_t addr = 16;
-    if (num_phys > 0) addr = found_phys[0];
-    
-    vga_clear_line(start_row);
-    vga_puts_xy(start_row, 0, "PHY ");
-    vga_put_hex16_xy(start_row, 4, addr);
-    vga_puts_xy(start_row, 7, " FULL DUMP:");
-
-    for (int reg = 0; reg < 32; reg++) {
-        uint16_t val = mdio_read(addr, reg);
-        int col = (reg % 4) * 20;
-        int row = start_row + 1 + (reg / 4);
-        if (reg % 4 == 0) vga_clear_line(row);
-        
-        vga_put_hex16_xy(row, col, (uint16_t)reg);
-        vga_puts_xy(row, col + 2, ":");
-        vga_put_hex16_xy(row, col + 3, val);
-    }
+    vga_puts_xy(5, 40, "SWEEP C:");
+    vga_put_hex16_xy(5, 48, cur_cycles);
+    vga_puts_xy(5, 55, "O:");
+    vga_put_hex16_xy(5, 58, cur_offset);
+    vga_puts_xy(6, 40, "BEST V:");
+    vga_put_hex16_xy(6, 48, best_val);
+    vga_puts_xy(6, 55, "C:");
+    vga_put_hex16_xy(6, 58, best_c);
+    vga_puts_xy(6, 62, "O:");
+    vga_put_hex16_xy(6, 65, best_o);
 }
 
 static void vga_hpi_diag_table(uint32_t page,
@@ -1335,76 +1367,60 @@ int main(void) {
         }
     }
 
-    show_status(0xC0020000, "Host active", "cfg device");
-    if (!configure_device()) {
-        show_status(0xE0030000, "USB cfg fail", "ep0 control");
-        while (1) {
-            msleep(500);
-            leds_g_out_write(0x012);
-            leds_r_out_write(0x12012);
-            msleep(500);
-            leds_g_out_write(0x048);
-            leds_r_out_write(0x04804);
-        }
-    }
+    // Initial Diags
+    vga_clear();
+    vga_puts_xy(0, 0, "DE2-115 DEEP DIVE");
 
     while (1) {
-        int ep;
-        uint32_t sw;
+        uint32_t sw = switches_in_read();
+        leds_r_out_write(sw);
 
-        msleep(10);
+        // --- Ethernet Deep Dive ---
+        uint8_t eth_addr = (sw & 0x10000) ? 17 : 16;
+        vga_puts_xy(2, 0, "ETH PORT:");
+        vga_puts_xy(2, 10, (sw & 0x10000) ? "1 (ADDR 17)" : "0 (ADDR 16)");
 
-        leds_g_out_write(1u << knight_pos);
-        knight_pos += knight_dir;
-        if (knight_pos == 8 || knight_pos == 0) {
-            knight_dir = -knight_dir;
-        }
+        // Read PHY Regs
+        uint16_t bmsr = mdio_read(eth_addr, 1);
+        uint16_t bmsr2 = mdio_read(eth_addr, 1);
+        uint16_t r27 = mdio_read(eth_addr, 27);
+        uint16_t r20 = mdio_read(eth_addr, 20);
+        uint16_t r10 = mdio_read(eth_addr, 10);
+        uint16_t r17 = mdio_read(eth_addr, 17);
 
-        sw = switches_in_read();
-        leds_r_out_write(sw & 0x3ffffu);
+        vga_puts_xy(4, 0, "STATUS:");
+        vga_puts_xy(4, 10, (bmsr2 & 0x0004) ? "LINK UP  " : "LINK DOWN");
+        vga_puts_xy(4, 25, (r27 & 0x0008) ? "FIBER " : "COPPER");
+        
+        vga_puts_xy(5, 0, "REGS:");
+        vga_puts_xy(5, 6, "SR1:"); vga_put_hex16_xy(5, 11, bmsr2);
+        vga_puts_xy(5, 20, "R27:"); vga_put_hex16_xy(5, 25, r27);
+        vga_puts_xy(5, 35, "R20:"); vga_put_hex16_xy(5, 40, r20);
+        vga_puts_xy(5, 50, "R10:"); vga_put_hex16_xy(5, 55, r10);
+        vga_puts_xy(6, 6, "R17:"); vga_put_hex16_xy(6, 11, r17);
 
-        for (ep = 1; ep <= 5; ++ep) {
-            uint16_t addr_pid_ep = (uint16_t)(0x0190 | ep);
-            int status;
-
-            write_td(0x0500, 0x0000, 8, addr_pid_ep, toggles[ep], 0x0520);
-            status = execute_td_sync(0x0500);
-
-            if (status == 0x0003) {
-                uint16_t d0;
-
-                ep_seen_mask |= (1u << ep);
-                toggles[ep] ^= 0x0040;
-                CY_HPI_ADDRESS = 0x0520;
-                d0 = (uint16_t)(CY_HPI_DATA & 0xffffu);
-                (void)CY_HPI_DATA;
-
-                if (d0 != 0 && d0 != last_data[ep]) {
-                    last_data[ep] = d0;
-                    itoa_hex32(d0, buf);
-                    lcd_set_cursor(1, 9);
-                    lcd_print("E");
-                    lcd_write_data((uint8_t)('0' + ep));
-                    lcd_print(":");
-                    lcd_print(buf + 4);
-                }
-            }
-        }
-
-        // High-frequency HPI read loop for debug capture (Switch 0)
-        if (sw & 0x1) {
-            vga_puts_xy(1, 60, "READ LOOP ON ");
-            for (int k = 0; k < 1000; k++) {
-                hpi_read_reg16(&CY_HPI_DATA);
-            }
+        // --- USB Deep Dive ---
+        vga_puts_xy(8, 0, "USB BRIDGE:");
+        vga_puts_xy(8, 12, (sw & 0x20000) ? "RST ACTIVE" : "RST RELEASED");
+        
+        if (sw & 0x20000) {
+            CY_BRIDGE_CFG0 = 0x0001; // Force RST
         } else {
-            vga_puts_xy(1, 60, "CAPTURE LOOP OFF");
+            CY_BRIDGE_CFG0 = 0x0003; // Release RST
         }
 
-        if ((i % 10u) == 0u) {
-            show_runtime_status(i / 10u, sw, ep_seen_mask);
-        }
+        // Timing from switches
+        uint8_t cycles = (sw >> 4) & 0x3F;
+        if (cycles < 6) cycles = 6;
+        CY_BRIDGE_CFG0 = (CY_BRIDGE_CFG0 & 0x03) | (cycles << 2);
 
-        ++i;
+        uint16_t usb_stat = hpi_read_reg16(&CY_HPI_STATUS);
+        vga_puts_xy(10, 0, "HPI_STAT:");
+        vga_put_hex16_xy(10, 10, usb_stat);
+        vga_puts_xy(10, 20, "CYCLES:");
+        vga_put_hex16_xy(10, 28, cycles);
+
+        msleep(100);
+        i++;
     }
 }
