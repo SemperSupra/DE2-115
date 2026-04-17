@@ -8,12 +8,19 @@ The current debugging infrastructure heavily relies on:
 1. **LiteScope:** Used for capturing Wishbone/HPI signals (`hpi_analyzer` in `de2_115_vga_target.py`).
 2. **In-System Sources and Probes (ISSP):** Used for real-time interaction (e.g., reset, basic captures) with the HPI bridge via TCL scripts.
 3. **JTAG Constraints:** JTAGBone has been removed from the LiteX SoC design to avoid multiplexing conflicts with ISSP and potential SignalTap usage.
+4. **Host/Container Separation:** Quartus (and thus SignalTap) is installed natively on the host development machine with direct USB access to the USB Blaster. The LiteX tools run inside a Docker container without direct JTAG access, presenting a logistical hurdle for native LiteX debugging.
 
-While LiteScope is powerful for in-system Wishbone analysis, SignalTap II offers deeper integration into Quartus, precise trigger conditions, and better visibility into lower-level hardware signaling independent of the LiteX infrastructure.
+While LiteScope is powerful for in-system Wishbone analysis, SignalTap II offers deeper integration into Quartus, precise trigger conditions, and better visibility into lower-level hardware signaling independent of the LiteX infrastructure. Furthermore, because Quartus runs directly on the host, SignalTap currently provides the most reliable access to the JTAG chain without requiring complex container USB passthrough configurations.
 
 ## Evidence-Based Strategy
 
 Based on industry best practices for FPGA board bring-up, debugging should be tiered, non-intrusive, and resource-aware.
+
+### 0. Environment Reality Check (Host vs. Container)
+**Problem:** The LiteX build environment is containerized and currently lacks direct USB passthrough to the DE2-115's USB Blaster, whereas the host OS has direct access to the JTAG interface via native Quartus.
+**Recommendation:**
+* In the short term, exclusively rely on native host tools (SignalTap, ISSP) for hardware verification to bypass container networking/USB complexities.
+* In the medium term (once lower-level hardware and timing issues are resolved and the focus shifts to firmware), prioritize configuring the Docker environment (e.g., via `--device=/dev/bus/usb` on Linux or specialized remote JTAG servers) to allow seamless LiteScope/litex_server debugging.
 
 ### 1. Unified JTAG Hub Management
 **Problem:** The DE2-115 has a single physical JTAG chain. Multiple debug tools (LiteScope, JTAGBone, ISSP, SignalTap) competing for the JTAG hub can cause instability and routing failures.
