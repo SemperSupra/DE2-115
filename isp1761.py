@@ -1,44 +1,36 @@
 from migen import *
-from migen.fhdl.specials import Tristate
 from litex.soc.interconnect import wishbone
+
 
 class ISP1761Bridge(Module):
     """
-    LiteX Wishbone Bridge for NXP ISP1761 USB Controller.
-    Added wait-states for asynchronous timing compatibility.
+    LiteX Wishbone bridge for the DE2-115 CY7C67200 HPI port.
+
+    Terasic's working bridge is intentionally simple: HPI control/address/data
+    follow the CPU bus directly, and the CPU-side fabric supplies wait states.
+    Keep that behavior here and use a small FSM only to delay/serialize the
+    Wishbone acknowledgement.
     """
     def __init__(self, pads):
         self.bus = bus = wishbone.Interface()
-        
-        data_width = len(pads.data)
-        data_w = Signal(data_width)
-        data_r = Signal(data_width)
-        data_oe = Signal()
-        self.specials += Tristate(pads.data, data_w, data_oe, data_r)
+        self.force_hpi_boot = Signal()
+        self.dbg_probe = Signal(152)
 
-        # Wait-state counter
-        count = Signal(3)
-        
-        self.comb += [
-            pads.cs_n.eq(~bus.cyc | ~bus.stb),
-            pads.rd_n.eq(~bus.cyc | ~bus.stb | bus.we),
-            pads.wr_n.eq(~bus.cyc | ~bus.stb | ~bus.we),
-            
-            pads.addr.eq(bus.adr[0:len(pads.addr)]),
-            
-            data_oe.eq(bus.we & bus.cyc & bus.stb),
-            data_w.eq(bus.dat_w[:data_width]),
-            bus.dat_r.eq(data_r)
-        ]
-        
-        self.sync += [
-            If(bus.cyc & bus.stb & ~bus.ack,
-                count.eq(count + 1),
-                If(count == 5, # 5-cycle wait state
-                    bus.ack.eq(1)
-                )
-            ).Else(
-                count.eq(0),
-                bus.ack.eq(0)
-            )
-        ]
+        self.specials += Instance("cy7c67200_wb_bridge",
+            i_clk=ClockSignal(),
+            i_rst=ResetSignal(),
+            i_wb_adr=bus.adr,
+            i_wb_dat_w=bus.dat_w,
+            o_wb_dat_r=bus.dat_r,
+            i_wb_cyc=bus.cyc,
+            i_wb_stb=bus.stb,
+            i_wb_we=bus.we,
+            o_wb_ack=bus.ack,
+            io_hpi_data=pads.data,
+            o_hpi_addr=pads.addr,
+            o_hpi_rd_n=pads.rd_n,
+            o_hpi_wr_n=pads.wr_n,
+            o_hpi_cs_n=pads.cs_n,
+            o_hpi_rst_n=pads.rst_n,
+            o_dbg_probe=self.dbg_probe,
+        )

@@ -12,26 +12,30 @@ def main():
     try:
         sdk = EpiphanKVM_SDK()
         
-        print("Running Autotune...")
-        sdk.autotune()
-        time.sleep(2)
+        time.sleep(2) # Give it time to initialize capture
         
         print("Checking device status...")
         status = sdk.get_status()
         print(f"Status: {status}")
         
         print("Capturing VGA output...")
-        output_file = "vga_capture.jpg"
-        sdk.get_screen(output_file)
+        # get_screen returns the absolute path of the captured file
+        path = sdk.get_screen("vga_diag")
         
-        if os.path.exists(output_file):
-            print(f"Success! VGA output captured to {output_file}")
+        if path and os.path.exists(path):
+            print(f"Success! VGA output captured to: {path}")
+            # Copy it to a fixed name for easy access if needed
+            import shutil
+            shutil.copy(path, "vga_capture.jpg")
+            print("Copied to vga_capture.jpg")
         else:
             print("Error: Capture failed, file not created.")
             
         sdk.close()
     except Exception as e:
         print(f"Failed to interact with Epiphan KVM2USB: {e}")
+        import traceback
+        traceback.print_exc()
 
 if __name__ == "__main__":
     main()

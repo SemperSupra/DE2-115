@@ -1,0 +1,16 @@
+config,None,data_width,256
+config,None,depth,2048
+config,None,samplerate,1000000000000
+signal,0,bus_adr,30
+signal,0,bus_dat_w,32
+signal,0,bus_dat_r,32
+signal,0,bus_cyc,1
+signal,0,bus_stb,1
+signal,0,bus_we,1
+signal,0,bus_ack,1
+signal,0,usb_otg_addr,2
+signal,0,usb_otg_rd_n,1
+signal,0,usb_otg_wr_n,1
+signal,0,usb_otg_cs_n,1
+signal,0,usb_otg_rst_n,1
+signal,0,dbg_probe,152

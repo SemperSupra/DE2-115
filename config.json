@@ -1,0 +1,6 @@
+{
+    "startup_preset": "Default",
+    "device_mappings": {
+        "[KVM2USB 3.0] KVM2USB 3.0": "Default"
+    }
+}

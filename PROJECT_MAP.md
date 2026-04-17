@@ -5,134 +5,41 @@
 ### Active Source
 
 - `de2_115_vga_platform.py`
-  Purpose: Extends the LiteX DE2-115 platform with the actual pin assignments
-  used by this project for VGA, LCD, USB, switches, LEDs, and 7-segment output.
-
+  - Purpose: LiteX platform with pin assignments for VGA, Ethernet, LCD, and USB.
+  - **Correction:** Uses on-board PHY pins (`B21`, `C20`, `C19`).
 - `de2_115_vga_target.py`
-  Purpose: Builds the LiteX SoC, clocking, SDRAM, Ethernet, SD card, VGA
-  generator, GPIO peripherals, and USB bus mapping.
-
-- `isp1761.py`
-  Purpose: Implements the Wishbone bridge to the external USB controller bus.
-  Despite the filename, this is effectively a generic HPI-style bus bridge in
-  the current design.
-
+  - Purpose: SoC target definition (VexRiscv, SDRAM, Peripherals).
+  - **USB:** Drives DACK/DREQ strapping pins for HPI mode.
+- `rtl/cy7c67200_wb_bridge.v`
+  - Purpose: Wishbone-to-HPI bridge logic.
+  - **Debug:** Includes a 160-bit ISSP diagnostic probe.
 - `firmware/src/main.c`
-  Purpose: Main board firmware. Handles diagnostics, LCD output, USB controller
-  access, TD execution, device setup requests, and endpoint polling.
+  - Purpose: SoC bring-up firmware.
+  - **Features:** MDIO scanner, PHY HW reset, HPI strapping diagnostic.
+- `firmware/src/lcp_blob.h`
+  - Purpose: Extracted CY7C67200 LCP (BIOS) firmware blob.
 
-- `firmware/src/font_8x16.c`
-  Purpose: Font data used by the firmware-side display logic.
+### Scripts & Debug Tools
 
-### Host Automation
+- `observe_vga.py` / `read_vga.py`
+  - VGA console capture and OCR-based text extraction.
+- `scripts/read_captured_hpi.tcl` / `decode_probe.py`
+  - JTAG-based HPI bus tracing and signal decoding.
+- `analyze_leds.py`
+  - OpenCV-based LED spot detection from board photos.
 
-- `scripts/setup_host.ps1`
-  Purpose: Verifies or installs host prerequisites such as Docker, Quartus, Git,
-  GitHub CLI, and USB-Blaster drivers.
+## Directory Structure
 
-- `scripts/build_soc.sh`
-  Purpose: Generates LiteX headers/build products and optionally reintegrates the
-  firmware binary into the SoC ROM image.
+- `rtl/`: Custom Verilog modules (HPI bridge, VGA text console).
+- `firmware/src/`: C source for the RISC-V SoC.
+- `scripts/`: Build and programming automation.
+- `tools/`: External SDKs (Epiphan KVM, AgentWebCam).
+- `local_artifacts/`: Captured logs and screenshots (untracked).
 
-- `scripts/build_firmware.sh`
-  Purpose: Builds the firmware against LiteX-generated headers and libraries.
+## Development Workflow
 
-- `scripts/load_bitstream.ps1`
-  Purpose: Programs the generated `.sof` file onto the DE2-115 over USB-Blaster.
-
-### Generated Output
-
-- `build/terasic_de2_115/`
-  Purpose: LiteX-generated hardware/software output and Quartus products.
-  Treat as generated unless debugging build artifacts.
-
-- `firmware/src/demo.bin`
-- `firmware/src/demo.elf`
-  Purpose: Built firmware outputs consumed by the SoC build flow.
-
-### Reference and Reverse-Engineering Material
-
-- `DE2_115_demonstrations/`
-  Purpose: Vendor demo designs. This is the most important reference tree for
-  the missing CY7C67200 LCP firmware blob.
-
-- `Downloads/`
-  Purpose: Manuals, datasheets, vendor ZIPs, and extracted support tooling. This
-  includes the "open system builder" reconstruction work used to derive board
-  mappings.
-
-- `tools/AgentKVM2USB/`
-  Purpose: Supporting host-side investigation utilities around the KVM2USB and
-  USB/HID analysis.
-
-- `tools/AgentWebCam/`
-  Purpose: Supporting utilities for webcam capture and related automation.
-
-### Observation Artifacts
-
-- `local_artifacts/screenshots/`
-- `local_artifacts/videos/`
-- `local_artifacts/logs/`
-  Purpose: Bring-up evidence. These files show board state, VGA output, LCD
-  output, captured sessions, and command transcripts. Useful for forensics, but
-  not primary source code.
-
-## Execution Flow
-
-1. Host environment is prepared with `scripts/setup_host.ps1`.
-2. `de2_115_vga_target.py` generates the LiteX SoC and software headers.
-3. `firmware/src/main.c` is built into `demo.bin`.
-4. The SoC is regenerated with `demo.bin` integrated into ROM.
-5. `scripts/load_bitstream.ps1` programs the board.
-6. Runtime behavior is observed through VGA, LCD, LEDs, photos, and logs.
-
-## Hardware/Software Boundary
-
-### FPGA Side
-
-- Clock generation and reset handling.
-- SDRAM, Ethernet, SD card integration.
-- VGA timing and pixel generation.
-- GPIO-mapped user interface devices.
-- Bus bridge to the external USB controller.
-
-### Firmware Side
-
-- User-visible diagnostics.
-- LCD command/data protocol.
-- Controller register reads and writes.
-- USB TD construction/execution.
-- Device setup traffic and polling logic.
-
-## Current Fault Line
-
-The project is not blocked on VGA, CPU bring-up, or low-level bus access.
-It is blocked between:
-
-- Successful raw HPI communication with the CY7C67200.
-- Successful higher-level USB host initialization.
-
-The missing transition step is loading and starting the controller's LCP
-firmware.
-
-## Files To Read First
-
-If you are resuming work, read these in order:
-
-1. `HANDOFF.md`
-2. `FINDINGS.md`
-3. `de2_115_vga_target.py`
-4. `firmware/src/main.c`
-5. `DE2_115_demonstrations/.../lcp_data.h` referenced by `HANDOFF.md`
-
-## Safe Editing Guidance
-
-- Edit `de2_115_vga_platform.py`, `de2_115_vga_target.py`, and
-  `firmware/src/main.c` freely when changing behavior.
-- Treat `build/` as generated output.
-- Treat `DE2_115_demonstrations/` and `Downloads/` as reference sources unless
-  you are intentionally extracting data from them.
-- Preserve `local_artifacts/` as local evidence unless you are explicitly
-  cleaning artifacts.
-- In this clone, `DE2_115_demonstrations/` and `tools/` are excluded via
-  `.git/info/exclude` to keep normal git status focused on project-owned files.
+1.  **Modify Firmware:** Edit `firmware/src/main.c`.
+2.  **Update Gateware:** Run `scripts/build_soc.sh` inside Docker.
+3.  **Quartus Compile:** Run `quartus_sh --flow compile` in the gateware directory.
+4.  **Program:** Use `load_bitstream.ps1`.
+5.  **Debug:** Use `read_captured_hpi.tcl` for bus traces or `read_vga.py` for OCR logs.

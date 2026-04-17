@@ -81,9 +81,20 @@ if not exist "%GATEWARE_DIR%" (
 )
 
 set "PROJECT_NAME="
-for %%F in (%GATEWARE_DIR%\*.qsf) do (
-    set "PROJECT_NAME=%%~nF"
+for %%F in ("%GATEWARE_DIR%\*.qsf") do (
+    if exist "%GATEWARE_DIR%\%%~nF.v" (
+        set "PROJECT_NAME=%%~nF"
+    )
 )
+
+if "!PROJECT_NAME!"=="" (
+    for %%F in ("%GATEWARE_DIR%\*.qsf") do (
+        set "PROJECT_NAME=%%~nF"
+        goto :project_selected
+    )
+)
+
+:project_selected
 
 if "!PROJECT_NAME!"=="" (
     echo [ERROR] Could not find any .qsf project file in %GATEWARE_DIR%.
