@@ -35,6 +35,7 @@ sed -i \
     -e 's|/workspace/cy7c67200_wb_bridge.v|cy7c67200_wb_bridge.v|g' \
     -e 's|/workspace/CY7C67200_IF.v|CY7C67200_IF.v|g' \
     -e 's|/workspace/build/terasic_de2_115/gateware/de2_115_vga_platform.v|de2_115_vga_platform.v|g' \
+    -e 's|/pythondata-cpu-vexriscv/pythondata_cpu_vexriscv/verilog/VexRiscv.v|VexRiscv.v|g' \
     "$GATEWARE_DIR/de2_115_vga_platform.qsf"
 
 echo "--- Copying VexRiscv CPU Verilog ---"

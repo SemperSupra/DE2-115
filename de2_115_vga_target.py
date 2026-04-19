@@ -42,6 +42,11 @@ class _CRG(LiteXModule):
         pll.create_clkout(self.cd_vga,    25e6)
         pll.create_clkout(self.cd_eth,    125e6)
 
+        # Blinker (to verify sys_clk)
+        self.counter = counter = Signal(32)
+        self.sync.sys += counter.eq(counter + 1)
+        self.comb += platform.request("user_led", 17).eq(counter[24])
+
         # SDRAM clock
         self.specials += DDROutput(1, 0, platform.request("sdram_clock"), ClockSignal("sys_ps"))
 
@@ -125,7 +130,7 @@ class SimpleVGA(LiteXModule):
 class DE2_115VGAMaster(SoCCore):
     def __init__(self, sys_clk_freq=50e6, **kwargs):
         self.platform = de2_115_vga_platform.Platform()
-        eth_port = int(os.environ.get("DE2_ETH_PORT", "0"))
+        eth_port = 0
         eth_core_ip = os.environ.get("DE2_ETH_CORE_IP", "192.168.178.50")
         # LiteX requires ethmac_local_ip != ip_address when with_ethmac=True.
         ethmac_local_ip = os.environ.get("DE2_ETH_LOCAL_IP", "192.168.178.51")
@@ -133,13 +138,12 @@ class DE2_115VGAMaster(SoCCore):
         
         # Enable key components
         kwargs["cpu_type"] = "vexriscv"
-        kwargs["integrated_rom_size"] = 0x20000 
+        kwargs["integrated_rom_size"] = 0x10000
+        kwargs["cpu_reset_address"] = 0x00000000
         
         # SoCCore
         SoCCore.__init__(self, self.platform, sys_clk_freq, ident="LiteX VGA Test SoC on DE2-115", **kwargs)
-        # JTAGBone (REMOVED to avoid conflict with SignalTap/ISSP)
-        # self.add_jtagbone(chain=1)
-
+        
         # CRG
         self.crg = _CRG(self.platform, sys_clk_freq)
         self.cd_vga = self.crg.cd_vga
@@ -165,6 +169,10 @@ class DE2_115VGAMaster(SoCCore):
             ethmac_local_ip=ethmac_local_ip,
             ethmac_remote_ip=eth_remote_ip,
         )
+
+        # Timer & UART
+        self.add_timer()
+        self.add_uart()
 
         # SD Card
         self.add_sdcard()
@@ -211,7 +219,7 @@ class DE2_115VGAMaster(SoCCore):
             setattr(self.submodules, f"hex{i}", GPIOOut(Cat(seg.a, seg.b, seg.c, seg.d, seg.e, seg.f, seg.g)))
         
         self.submodules.leds_g = GPIOOut(self.platform.request("leds_g"))
-        self.submodules.leds_r = GPIOOut(Cat([self.platform.request("user_led", i) for i in range(18)]))
+        self.submodules.leds_r = GPIOOut(Cat([self.platform.request("user_led", i) for i in range(17)]))
         self.submodules.switches = GPIOIn(self.platform.request("switches", 0))
 
         # LCD Control
@@ -229,13 +237,19 @@ class DE2_115VGAMaster(SoCCore):
 
         self.platform.add_source("CY7C67200_IF.v")
         self.platform.add_source("cy7c67200_wb_bridge.v")
-        self.submodules.usb_otg = ISP1761Bridge(usb_pads)
+        
+        diag_in = Cat(self.crg.pll.locked, self.crg.counter[24])
+        self.submodules.usb_otg = ISP1761Bridge(usb_pads, diag_in=diag_in)
         self.bus.add_slave("usb_otg", self.usb_otg.bus,
             region=SoCRegion(origin=0x82000000, size=0x10000, cached=False))
 
         # LiteX-native debug core for HPI/Wishbone bring-up.
+        sys_rst_debug = Signal()
+        self.comb += sys_rst_debug.eq(ResetSignal("sys"))
         self.submodules.hpi_analyzer = LiteScopeAnalyzer(
             [
+                self.crg.pll.locked,
+                sys_rst_debug,
                 self.usb_otg.bus.adr,
                 self.usb_otg.bus.dat_w,
                 self.usb_otg.bus.dat_r,
@@ -267,9 +281,9 @@ if __name__ == "__main__":
     parser.add_argument("--with-firmware", help="Path to firmware binary to integrate into ROM")
     args = parser.parse_args()
 
-    soc_kwargs = {}
+    soc_kwargs = soc_core_argdict(args)
     if args.with_firmware:
-        soc_kwargs["integrated_rom_size"] = 0x20000
+        soc_kwargs["integrated_rom_size"] = 0x10000
         soc_kwargs["integrated_rom_init"] = get_mem_data(args.with_firmware, endianness="little")
 
     soc = DE2_115VGAMaster(**soc_kwargs)

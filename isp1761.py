@@ -11,10 +11,10 @@ class ISP1761Bridge(Module):
     Keep that behavior here and use a small FSM only to delay/serialize the
     Wishbone acknowledgement.
     """
-    def __init__(self, pads):
+    def __init__(self, pads, diag_in=0):
         self.bus = bus = wishbone.Interface()
         self.force_hpi_boot = Signal()
-        self.dbg_probe = Signal(152)
+        self.dbg_probe = Signal(160)
 
         self.specials += Instance("cy7c67200_wb_bridge",
             i_clk=ClockSignal(),
@@ -32,5 +32,6 @@ class ISP1761Bridge(Module):
             o_hpi_wr_n=pads.wr_n,
             o_hpi_cs_n=pads.cs_n,
             o_hpi_rst_n=pads.rst_n,
+            i_diag_in=diag_in,
             o_dbg_probe=self.dbg_probe,
         )

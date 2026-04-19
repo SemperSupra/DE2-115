@@ -16,6 +16,7 @@ module cy7c67200_wb_bridge (
     output wire        hpi_wr_n,
     output wire        hpi_cs_n,
     output wire        hpi_rst_n,
+    input  wire [1:0]  diag_in,
     output wire [159:0] dbg_probe
 );
 
@@ -23,6 +24,7 @@ module cy7c67200_wb_bridge (
     localparam STATE_WAIT       = 2'd1;
     localparam STATE_ACK        = 2'd2;
     localparam STATE_TURNAROUND = 2'd3;
+
 
     localparam ACCESS_CYCLES_DEFAULT     = 6'd63;
     localparam TURNAROUND_CYCLES_DEFAULT = 6'd8;
@@ -98,7 +100,7 @@ module cy7c67200_wb_bridge (
     always @(posedge clk) begin
         if (active && count == 6'd10 && !diag_captured) begin
             diag_probe_reg <= {
-                8'd0, hpi_access, rst, hpi_rst_n, wb_access, debug_access, active, debug_latched, latched_we, wb_we,
+                6'd0, diag_in, hpi_access, rst, hpi_rst_n, wb_access, debug_access, active, debug_latched, latched_we, wb_we,
                 state, count, hpi_cs_n, hpi_rd_n, hpi_wr_n, hpi_addr,
                 1'b0, 1'b0, 1'b0, 2'b0,
                 wb_ack, 3'b000, latched_adr[9:0], write_data, read_data,
@@ -112,7 +114,7 @@ module cy7c67200_wb_bridge (
     end
 
     wire [159:0] diag_probe_mux = diag_captured ? diag_probe_reg : {
-        8'd0, hpi_access, rst, hpi_rst_n, wb_access, debug_access, active, debug_latched, latched_we, wb_we,
+        6'd0, diag_in, hpi_access, rst, hpi_rst_n, wb_access, debug_access, active, debug_latched, latched_we, wb_we,
         state, count, hpi_cs_n, hpi_rd_n, hpi_wr_n, hpi_addr,
         1'b0, 1'b0, 1'b0, 2'b0,
         wb_ack, 3'b000, latched_adr[9:0], write_data, read_data,

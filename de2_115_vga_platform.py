@@ -29,7 +29,10 @@ _extra_io = [
     ),
 
     # Buttons - Bank 7 (2.5V)
-    ("buttons", 0, Pins("M23 M21 N21 R24"), IOStandard("2.5 V")),
+    ("buttons", 0, Pins("M23"), IOStandard("2.5 V")), # KEY0
+    ("buttons", 1, Pins("M21"), IOStandard("2.5 V")), # KEY1
+    ("buttons", 2, Pins("N21"), IOStandard("2.5 V")), # KEY2
+    ("buttons", 3, Pins("R24"), IOStandard("2.5 V")), # KEY3
 
     # Green LEDs - Bank 7 (2.5V)
     ("leds_g", 0, Pins("E21 E22 E25 E24 H21 G20 G22 G21 F17"), IOStandard("2.5 V")),
