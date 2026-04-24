@@ -3,43 +3,26 @@
 ## Top-Level View
 
 ### Active Source
-
 - `de2_115_vga_platform.py`
-  - Purpose: LiteX platform with pin assignments for VGA, Ethernet, LCD, and USB.
-  - **Correction:** Uses on-board PHY pins (`B21`, `C20`, `C19`).
+  - Purpose: LiteX platform with verified pin assignments for VGA, Ethernet (Port 1 fixed), and USB (CY7C67200).
 - `de2_115_vga_target.py`
-  - Purpose: SoC target definition (VexRiscv, SDRAM, Peripherals).
-  - **USB:** Drives DACK/DREQ strapping pins for HPI mode.
-- `rtl/cy7c67200_wb_bridge.v`
-  - Purpose: Wishbone-to-HPI bridge logic.
-  - **Debug:** Includes a 160-bit ISSP diagnostic probe.
+  - Purpose: SoC target definition. Includes phase-shifted `eth_tx_ps` clock domain and Wishbone bridge to USB HPI.
+- `rtl/vga_text_console.v`
+  - Purpose: VGA text generator (80x30). Now uses registered sync for stability.
 - `firmware/src/main.c`
-  - Purpose: SoC bring-up firmware.
-  - **Features:** MDIO scanner, PHY HW reset, HPI strapping diagnostic.
-- `firmware/src/lcp_blob.h`
-  - Purpose: Extracted CY7C67200 LCP (BIOS) firmware blob.
+  - Purpose: Primary diagnostic and bring-up firmware. Handles LCP/BIOS loading and UART reporting.
 
-### Scripts & Debug Tools
-
-- `observe_vga.py` / `read_vga.py`
-  - VGA console capture and OCR-based text extraction.
-- `scripts/read_captured_hpi.tcl` / `decode_probe.py`
-  - JTAG-based HPI bus tracing and signal decoding.
-- `analyze_leds.py`
-  - OpenCV-based LED spot detection from board photos.
-
-## Directory Structure
-
-- `rtl/`: Custom Verilog modules (HPI bridge, VGA text console).
-- `firmware/src/`: C source for the RISC-V SoC.
-- `scripts/`: Build and programming automation.
-- `tools/`: External SDKs (Epiphan KVM, AgentWebCam).
-- `local_artifacts/`: Captured logs and screenshots (untracked).
+### Build & Test Tools
+- `scripts/build_firmware.sh`: RISC-V GCC compilation in Docker.
+- `scripts/build_soc.sh`: LiteX SoC generation and ROM integration.
+- `scripts/build_bitstream.ps1`: Host-side Quartus compilation.
+- `scripts/load_bitstream.ps1`: JTAG programming via USB-Blaster.
+- `scripts/test_usb_kvm.py`: Automated KVM input test using Epiphan SDK.
+- `monitor_uart.py`: Real-time serial diagnostic monitor.
 
 ## Development Workflow
-
-1.  **Modify Firmware:** Edit `firmware/src/main.c`.
-2.  **Update Gateware:** Run `scripts/build_soc.sh` inside Docker.
-3.  **Quartus Compile:** Run `quartus_sh --flow compile` in the gateware directory.
-4.  **Program:** Use `load_bitstream.ps1`.
-5.  **Debug:** Use `read_captured_hpi.tcl` for bus traces or `read_vga.py` for OCR logs.
+1. **Modify Firmware/RTL.**
+2. **Rebuild Firmware:** `docker exec litex_env /bin/bash /workspace/scripts/build_firmware.sh`
+3. **Regenerate Gateware:** `docker exec litex_env /bin/bash /workspace/scripts/build_soc.sh 1`
+4. **Compile SOF:** `.\scripts\build_bitstream.ps1`
+5. **Program & Monitor:** `.\scripts\load_bitstream.ps1; python monitor_uart.py`

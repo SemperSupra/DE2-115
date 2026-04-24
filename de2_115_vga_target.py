@@ -28,6 +28,7 @@ class _CRG(LiteXModule):
         self.cd_sys_ps = ClockDomain() 
         self.cd_vga    = ClockDomain()
         self.cd_eth    = ClockDomain()
+        self.cd_eth_tx_ps = ClockDomain()
 
         # Clk / Rst
         clk50 = platform.request("clk50")
@@ -41,6 +42,7 @@ class _CRG(LiteXModule):
         pll.create_clkout(self.cd_sys_ps, sys_clk_freq, phase=90)
         pll.create_clkout(self.cd_vga,    25e6)
         pll.create_clkout(self.cd_eth,    125e6)
+        pll.create_clkout(self.cd_eth_tx_ps, 125e6, phase=90)
 
         # Blinker (to verify sys_clk)
         self.counter = counter = Signal(32)
@@ -128,9 +130,8 @@ class SimpleVGA(LiteXModule):
 
 # --- Master SoC ---
 class DE2_115VGAMaster(SoCCore):
-    def __init__(self, sys_clk_freq=50e6, **kwargs):
+    def __init__(self, sys_clk_freq=50e6, eth_port=0, **kwargs):
         self.platform = de2_115_vga_platform.Platform()
-        eth_port = 0
         eth_core_ip = os.environ.get("DE2_ETH_CORE_IP", "192.168.178.50")
         # LiteX requires ethmac_local_ip != ip_address when with_ethmac=True.
         ethmac_local_ip = os.environ.get("DE2_ETH_LOCAL_IP", "192.168.178.51")
@@ -160,6 +161,7 @@ class DE2_115VGAMaster(SoCCore):
         self.submodules.ethphy = LiteEthPHYRGMII(
             clock_pads = self.platform.request("eth_clocks", eth_port),
             pads       = self.platform.request("rgmii_eth", eth_port),
+            tx_clk     = self.crg.cd_eth_tx_ps.clk,
         )
         self.add_etherbone(
             phy=self.ethphy,
@@ -172,7 +174,7 @@ class DE2_115VGAMaster(SoCCore):
 
         # Timer & UART
         self.add_timer()
-        self.add_uart()
+        self.add_uart(baudrate=115200)
 
         # SD Card
         self.add_sdcard()
@@ -232,7 +234,6 @@ class DE2_115VGAMaster(SoCCore):
         # Drive USB strapping pins for HPI mode:
         # DREQ should be LOW, DACK# should be HIGH at reset de-assertion.
         self.comb += [
-            usb_pads.dack_n.eq(0b11),
         ]
 
         self.platform.add_source("CY7C67200_IF.v")
@@ -279,6 +280,7 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="LiteX SoC on DE2-115")
     parser.add_argument("--with-firmware", help="Path to firmware binary to integrate into ROM")
+    parser.add_argument("--eth-port", default=0, type=int, help="Ethernet port (0 or 1)")
     args = parser.parse_args()
 
     soc_kwargs = soc_core_argdict(args)
@@ -286,6 +288,6 @@ if __name__ == "__main__":
         soc_kwargs["integrated_rom_size"] = 0x10000
         soc_kwargs["integrated_rom_init"] = get_mem_data(args.with_firmware, endianness="little")
 
-    soc = DE2_115VGAMaster(**soc_kwargs)
+    soc = DE2_115VGAMaster(eth_port=args.eth_port, **soc_kwargs)
     builder = Builder(soc, output_dir="build/terasic_de2_115", compile_software=True)
     builder.build(run=False)

@@ -7,6 +7,8 @@ services:
       - .:/workspace
       # Mount Quartus Lite from the host (installed by the automated script)
       - C:\intelFPGA_lite\22.1std:/opt/intelFPGA_lite
+    ports:
+      - "1234:1234"
     tty: true
     stdin_open: true
     command: /bin/bash

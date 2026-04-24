@@ -1,43 +1,54 @@
-# DE2-115 Handoff - Ethernet & USB Status
+# DE2-115 Handoff - Status Update
 
-Date: 2026-04-19
+Date: 2026-04-24
 Workspace: `C:\Users\Mark\Projects\DE2-115`
 
 ## Executive Status
-
-- **Remote Debugging Only:** No local serial connection or GPIO access. Must use `AgentWebCam` for board LEDs/displays, `AgentKVM2USB` for VGA output, and `SignalTap` (via `quartus_stp`) for internal signals.
-- **MDIO & Bridge Resolved:** All communication paths between the SoC and peripherals (MDIO, HPI Bridge) are 100% verified and functional.
-- **CRITICAL BLOCKER (Clock/Reset Wall) RESOLVED:** The CPU is now alive, Wishbone bus is functioning, and firmware is actively executing and rendering to the VGA console!
+- **Serial Connection Established:** UART (COM3) is now fully integrated and functional at 115200 baud. It provides real-time heartbeat and co-processor diagnostics.
+- **VGA Stabilized:** Registering sync signals has fixed VGA capture issues.
+- **USB HPI Bridge Functional:** The Wishbone-to-HPI bridge is 100% verified for data integrity.
+- **Ethernet Physical Link Solid:** Both PHYs show Link UP, but IP connectivity is still pending.
 
 ## Technical Progress
 
-### 1. Root Cause of "Dead" CPU Block
-- **Investigation:** Using the ISSP probe `read_captured_hpi.tcl` and decoding the output, I confirmed that the `sys_clk` counter was running and the `pll_locked` bit was HIGH. So the system clocks and resets were fine.
-- **The Issue:** The real culprit was the automated Docker-to-Windows Quartus pipeline! The LiteX container generated `de2_115_vga_platform.qsf` containing an absolute Linux path for the CPU (`/pythondata-cpu-vexriscv/pythondata_cpu_vexriscv/verilog/VexRiscv.v`). When synthesis ran on Windows, Quartus could not find the file and silently treated the CPU as a "black box," effectively ripping the entire VexRiscv processor out of the final bitstream.
-- **The Fix:** I updated `scripts/build_soc.sh` with a `sed` replacement step to fix the `VexRiscv.v` path in the `.qsf` file before synthesis.
+### 1. UART & Diagnostics
+- Integrated `UART` peripheral at pins `G9`/`G12`.
+- Updated `firmware/src/main.c` with a robust diagnostic suite that reports:
+  - System Ticks
+  - PHY Link Status (Both Ports)
+  - USB Co-processor Revision and Status
+  - Raw HID endpoint data
 
-### 2. Firmware and VGA Validation
-- Recompiled the firmware with the correct headers (Pass 2 `build_soc.sh`) and resynthesized the gateware.
-- Captured the ISSP probe again, which now showed the CPU issuing valid Wishbone writes (e.g., `86A0`, `1FBC`).
-- Ran `observe_vga.py` via `AgentKVM2USB`. Although the KVM reported `is_signal_active: False`, analyzing the captured `vga_capture.jpg` image pixel data showed over 300,000 bright pixels. The firmware is successfully printing the "DE2-115 DEEP DIVE: ETH & USB" console interface to the VGA output!
+### 2. USB Subsystem Bring-up
+- **Resolved Pin Conflicts:** Removed `dack_n` (unused) which was conflicting with `addr[1]` on pin `C14`.
+- **HPI Timing:** Optimized bridge timing with `CY_BRIDGE_CFG0` (20 access cycles).
+- **Firmware Loading:** Implemented full LCP and BIOS loading sequence.
+- **Current State:** The hardware interface is verified. The co-processor is alive and H1STAT shows `0x003C` (Device Detected), but a final "Connected" handshake via mailbox is still being tuned.
+
+### 3. VGA Subsystem Fixes
+- Registered `vga_hsync_n` and `vga_vsync_n` in `rtl/vga_text_console.v`.
+- This ensures zero-glitch sync pulses perfectly aligned with the pixel clock.
 
 ## Current Blockers / Open Issues
-
-- **Ethernet Connectivity:** The board is still unreachable via `ping` / `litex_server` at 192.168.178.50. The firmware is now executing, so we need to observe the VGA output (or LEDs) to see what the MDIO auto-negotiation reports (LINK UP vs LINK DOWN).
-- **USB Bring-up:** We need to verify if the CY7C67200 is initializing correctly via the firmware's HPI accesses.
+- **Ethernet ARP/IP:** Despite PHY link UP at 1000Mbps, the host cannot ping the board. Suspect RGMII TX skew or MAC filtering.
+- **USB Device Handshake:** co-processor detects device hardware-wise but doesn't transition to the "CONNECTED" software state in the mailbox.
 
 ## Next Steps
-
-1.  **VGA OCR / Image Analysis:** Visually inspect `vga_capture.jpg` (or run OCR) to read the live diagnostics printed by `main.c` (ETH STATUS, SR1, R27, R10 registers).
-2.  **Ethernet Troubleshooting:** Depending on the VGA console output, debug why the Marvell PHY link isn't coming up or why UDP packets are not reaching the PC.
-3.  **USB Validation:** Check the VGA output for the USB HPI read values (Address 01B0) to ensure the CY7C67200 bridge is responding correctly.
+1. **Debug Ethernet TX Path:** Use SignalTap to verify if RGMII TX data is actually reaching the pins with correct timing.
+2. **Refine USB Handshake:** Verify the BIOS/LCP jump addresses and ensure co-processor IRQs are handled or polled correctly.
+3. **KVM Validation:** Once "CONNECTED" state is reached, run `scripts/test_usb_kvm.py` to exercise the HID stack.
 
 ## Useful Commands
-
 ```powershell
-# Automated VGA Status Check
-py -3.12 observe_vga.py; py -3.12 read_vga.py
+# Full Build Cycle (Firmware -> SoC -> Bitstream -> Load)
+docker exec litex_env /bin/bash /workspace/scripts/build_firmware.sh
+docker exec litex_env /bin/bash /workspace/scripts/build_soc.sh 1
+.\scripts\build_bitstream.ps1
+.\scripts\load_bitstream.ps1
 
-# ISSP HPI Bus Trace
-& "C:\intelFPGA_lite\22.1std\quartus\bin64\quartus_stp.exe" -t scripts/read_captured_hpi.tcl | python decode_probe.py
+# Run Diagnostics Monitor
+python monitor_uart.py
+
+# Run KVM Automated Test
+python scripts/test_usb_kvm.py
 ```

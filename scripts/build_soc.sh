@@ -17,13 +17,15 @@ cp "$HPI_BRIDGE_SRC" "$HPI_BRIDGE_STAGED"
 cp "$CY_IF_SRC" "$CY_IF_STAGED"
 cp "$VGA_TEXT_SRC" "$VGA_TEXT_STAGED"
 
-echo "--- Stage 1: Generating Software Headers ---"
-python3 $TARGET_PATH
+ETH_PORT=${1:-0}
+
+echo "--- Stage 1: Generating Software Headers (Port $ETH_PORT) ---"
+python3 $TARGET_PATH --eth-port $ETH_PORT
 
 # Check if firmware exists. If not, we might be in the first pass of a two-pass build.
 if [ -f "$FIRMWARE_BIN" ]; then
-    echo "--- Stage 2: Integrating Firmware into ROM ---"
-    python3 $TARGET_PATH --with-firmware $FIRMWARE_BIN
+    echo "--- Stage 2: Integrating Firmware into ROM (Port $ETH_PORT) ---"
+    python3 $TARGET_PATH --with-firmware $FIRMWARE_BIN --eth-port $ETH_PORT
 else
     echo "Info: Firmware binary not found. Skipping integration for now."
     echo "You should build the firmware and then re-run this script."

@@ -122,19 +122,18 @@ _extra_io = [
         IOStandard("3.3-V LVTTL")
     ),
 
-    # USB - Bank 1 & 8 (3.3V)
+    # USB - OTG (CY7C67200)
     ("usb_otg", 0,
         Subsignal("data", Pins(
             "J6 K4 J5 K3 J4 J3 J7 H6",
             "H3 H4 G1 G2 G3 F1 F3 G4")),
-        Subsignal("addr", Pins("H7 C3")),
-        Subsignal("cs_n", Pins("A3")),
-        Subsignal("rd_n", Pins("B3")),
-        Subsignal("wr_n", Pins("A4")),
-        Subsignal("rst_n", Pins("C5")),
+        Subsignal("addr", Pins("H7 C14")),
+        Subsignal("cs_n", Pins("AF4")),
+        Subsignal("rd_n", Pins("AD5")),
+        Subsignal("wr_n", Pins("AF5")),
+        Subsignal("rst_n", Pins("D27"), IOStandard("2.5 V")),
         Subsignal("int0", Pins("D5")),
         Subsignal("int1", Pins("E5")),
-        Subsignal("dack_n", Pins("C4 D4")),
         Subsignal("dreq", Pins("B4 J1")),
         IOStandard("3.3-V LVTTL")
     ),
@@ -157,18 +156,22 @@ _extra_io = [
     ),
     ("eth_clocks", 1,
         Subsignal("tx", Pins("C23")),
-        Subsignal("rx", Pins("L15")),
+        Subsignal("rx", Pins("B15")),
         IOStandard("2.5 V")
     ),
     ("rgmii_eth", 1,
-        Subsignal("rst_n",   Pins("D7")),
-        Subsignal("mdio",    Pins("D13")),
+        Subsignal("rst_n",   Pins("D22")),
+        Subsignal("mdio",    Pins("D25")),
         Subsignal("mdc",     Pins("D23")),
-        Subsignal("rx_ctl",  Pins("M21")),
-        Subsignal("rx_data", Pins("T20 T21 U21 U22")),
+        Subsignal("rx_ctl",  Pins("A22")),
+        Subsignal("rx_data", Pins("B23 C21 A23 D21")),
         Subsignal("tx_ctl",  Pins("B25")),
         Subsignal("tx_data", Pins("C25 A26 B26 C26")),
         IOStandard("2.5 V")
+    ),
+    ("serial_swapped", 0,
+        Subsignal("tx", Pins("G12"), IOStandard("3.3-V LVTTL")),
+        Subsignal("rx", Pins("G9"), IOStandard("3.3-V LVTTL"))
     ),
 ]
 

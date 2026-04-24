@@ -1,17 +1,8 @@
 #include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-
 #include <generated/csr.h>
 #include <generated/mem.h>
-
-#include "font.h"
-
-// --- Constants ---
-#define VGA_TEXT_BASE 0x83000000u
-#define VGA_COLS 80
-#define VGA_ROWS 30
-#define VGA_TEXT ((volatile uint32_t *)VGA_TEXT_BASE)
+#include "pcd_asm.h"
+#include "lcp_blob.h"
 
 #define CY_BASE 0x82000000u
 #define CY_HPI_DATA    (*(volatile uint32_t *)(CY_BASE + 0x000))
@@ -20,66 +11,35 @@
 #define CY_HPI_STATUS  (*(volatile uint32_t *)(CY_BASE + 0x00C))
 #define CY_BRIDGE_CFG0 (*(volatile uint32_t *)(CY_BASE + 0x100))
 
-// --- MDIO ---
-#define MDC (1u << CSR_ETHPHY_MDIO_W_MDC_OFFSET)
-#define MDO (1u << CSR_ETHPHY_MDIO_W_W_OFFSET)
-#define OE  (1u << CSR_ETHPHY_MDIO_W_OE_OFFSET)
-#define R   (1u << CSR_ETHPHY_MDIO_R_R_OFFSET)
+#define COMM_ACK               0x0FED
+#define COMM_RESET             0xFA50
+#define COMM_JUMP2CODE         0xCE00
+#define COMM_INT_NUM           0x01C2
+#define COMM_R0                0x01C4
+#define COMM_CODE_ADDR         0x01BC
+#define HUSB_SIE1_INIT_INT     0x0072
+#define HUSB_RESET_INT         0x0074
+#define HPI_IRQ_ROUTING_REG    0x0142
+#define HPI_SIE1_MSG_ADR       0x0144
+#define HUSB_SIE1_pCurrentTDPtr 0x01B0
+#define HUSB_pEOT              0x01B4
+#define HOST1_IRQ_EN_REG       0xC08C
+#define HOST1_STAT_REG         0xC090
+#define SOFEOP1_TO_CPU_EN      0x0400
+#define RESUME1_TO_HPI_EN      0x0040
+#define A_CHG_IRQ_EN           0x0010
+#define SOF_EOP_IRQ_EN         0x0200
+#define HPI_STATUS_SIE1MSG     (1u << 4)
 
-static void mdio_delay(void) {
-    for (volatile int i = 0; i < 100; i++);
+void msleep(uint32_t ms) {
+    for (volatile int i = 0; i < ms * 10000; i++);
 }
 
-static uint16_t mdio_read(uint8_t phy_addr, uint8_t reg_addr) {
-    uint32_t val = 0;
-    int i;
-    for (i = 0; i < 32; i++) {
-        ethphy_mdio_w_write(OE | MDC); mdio_delay();
-        ethphy_mdio_w_write(OE); mdio_delay();
+void uart_puts(const char *s) {
+    while (*s) {
+        while (uart_txfull_read());
+        uart_rxtx_write(*s++);
     }
-    uint32_t cmd = 0x60000000u | ((uint32_t)phy_addr << 23) | ((uint32_t)reg_addr << 18);
-    for (i = 0; i < 14; i++) {
-        uint32_t bit = (cmd & 0x80000000u) ? MDO : 0;
-        ethphy_mdio_w_write(OE | bit | MDC); mdio_delay();
-        ethphy_mdio_w_write(OE | bit); mdio_delay();
-        cmd <<= 1;
-    }
-    ethphy_mdio_w_write(MDC); mdio_delay();
-    ethphy_mdio_w_write(0); mdio_delay();
-    for (i = 0; i < 16; i++) {
-        ethphy_mdio_w_write(MDC); mdio_delay();
-        uint32_t bit = (ethphy_mdio_r_read() & R) ? 1 : 0;
-        ethphy_mdio_w_write(0); mdio_delay();
-        val = (val << 1) | bit;
-    }
-    return (uint16_t)val;
-}
-
-static void mdio_write(uint8_t phy_addr, uint8_t reg_addr, uint16_t data) {
-    int i;
-    for (i = 0; i < 32; i++) {
-        ethphy_mdio_w_write(OE | MDC); mdio_delay();
-        ethphy_mdio_w_write(OE); mdio_delay();
-    }
-    uint32_t cmd = 0x50020000u | ((uint32_t)phy_addr << 23) | ((uint32_t)reg_addr << 18) | (uint32_t)data;
-    for (i = 0; i < 32; i++) {
-        uint32_t bit = (cmd & 0x80000000u) ? MDO : 0;
-        ethphy_mdio_w_write(OE | bit | MDC); mdio_delay();
-        ethphy_mdio_w_write(OE | bit); mdio_delay();
-        cmd <<= 1;
-    }
-    ethphy_mdio_w_write(0); mdio_delay();
-}
-
-// --- VGA ---
-static void vga_clear(void) {
-    for (int i = 0; i < VGA_COLS * VGA_ROWS; i++) VGA_TEXT[i] = ' ';
-}
-
-static void vga_puts_xy(unsigned int row, unsigned int col, const char *str) {
-    if (row >= VGA_ROWS) return;
-    volatile uint32_t *p = &VGA_TEXT[row * VGA_COLS + col];
-    while (*str && col < VGA_COLS) { *p++ = *str++; col++; }
 }
 
 static void itoa_hex16(uint16_t value, char *buf) {
@@ -91,89 +51,173 @@ static void itoa_hex16(uint16_t value, char *buf) {
     buf[4] = '\0';
 }
 
-static void vga_put_hex16_xy(unsigned int row, unsigned int col, uint16_t val) {
-    char buf[5]; itoa_hex16(val, buf); vga_puts_xy(row, col, buf);
+static void usb_write(uint16_t addr, uint16_t data) {
+    CY_HPI_ADDRESS = addr;
+    CY_HPI_DATA = data;
 }
 
-// --- Utilities ---
-void msleep(uint32_t ms) {
-    for (volatile int i = 0; i < ms * 1000; i++);
+static uint16_t usb_read(uint16_t addr) {
+    CY_HPI_ADDRESS = addr;
+    return (uint16_t)(CY_HPI_DATA & 0xFFFF);
 }
 
-void irq_setmask(uint32_t mask) { (void)mask; }
-void irq_setie(uint32_t ie) { (void)ie; }
+static int wait_ack(void) {
+    int timeout = 1000000;
+    while (timeout--) {
+        if (CY_HPI_STATUS & 1) {
+            if ((CY_HPI_MAILBOX & 0xFFFF) == COMM_ACK) return 1;
+        }
+    }
+    return 0;
+}
 
-// --- Main ---
+static void usb_write_block(uint16_t addr, const uint8_t *data, uint16_t len) {
+    for (uint16_t i=0; i<len; i+=2) {
+        uint16_t w = data[i] | (data[i+1] << 8);
+        usb_write(addr + i, w);
+    }
+}
+
+static void write_td(uint16_t td_addr, uint16_t next_td, uint16_t length,
+    uint16_t addr_pid_ep, uint16_t toggle, uint16_t buf_addr) {
+    CY_HPI_ADDRESS = td_addr;
+    CY_HPI_DATA = next_td;
+    CY_HPI_DATA = length;
+    CY_HPI_DATA = addr_pid_ep;
+    CY_HPI_DATA = toggle;
+    CY_HPI_DATA = 0x0013; // Enable
+    CY_HPI_DATA = buf_addr;
+}
+
+static int execute_td_sync(uint16_t td_addr) {
+    int timeout = 100000;
+    if (CY_HPI_STATUS & HPI_STATUS_SIE1MSG) { usb_read(HPI_SIE1_MSG_ADR); usb_write(HPI_SIE1_MSG_ADR, 0); }
+    usb_write(HUSB_pEOT, 600);
+    usb_write(HUSB_SIE1_pCurrentTDPtr, td_addr);
+    while (!(CY_HPI_STATUS & HPI_STATUS_SIE1MSG) && timeout-- > 0);
+    if (timeout <= 0) return 0xFFFF;
+    usb_read(HPI_SIE1_MSG_ADR);
+    usb_write(HPI_SIE1_MSG_ADR, 0);
+    CY_HPI_ADDRESS = td_addr + 8; // Offset to status
+    return (int)(CY_HPI_DATA & 0xFFFF);
+}
+
 int main(void) {
-    uint32_t tick = 0;
-    vga_clear();
-    vga_puts_xy(0, 0, "DE2-115 DEEP DIVE: ETH & USB");
-    printf("\n--- DE2-115 DEEP DIVE STARTING ---\n");
+    char hex[5];
+    uart_init();
+    uart_puts("USB KVM TEST START\n");
+    
+    // 0. Slow down HPI timing for stability
+    // Bits 2-7: access_cycles. Let's use 20 (0x14)
+    // Bit 0: force_rst_en = 0
+    CY_BRIDGE_CFG0 = (0x14 << 2); 
+    uart_puts("HPI TIMING SET\n");
 
+    // 1. HW Reset
+    CY_BRIDGE_CFG0 |= 0x0001; msleep(100);
+    CY_BRIDGE_CFG0 |= 0x0002; msleep(200); // Release RST
+    
+    // 2. Memory Test
+    usb_write(0x1000, 0x1234);
+    uint16_t mcheck = usb_read(0x1000);
+    itoa_hex16(mcheck, hex);
+    uart_puts("MEM CHECK: "); uart_puts(hex);
+    if (mcheck == 0x1234) uart_puts(" OK\n"); else uart_puts(" FAIL\n");
+
+    // 2. Load LCP
+    uart_puts("LCP... ");
+    uint32_t lcp_pos = 0;
+    while (lcp_pos < sizeof(pcd_asm)) {
+        uint16_t tag = pcd_asm[lcp_pos] | (pcd_asm[lcp_pos+1] << 8);
+        if (tag != 0xc3b6) break;
+        uint16_t rlen = pcd_asm[lcp_pos+2] | (pcd_asm[lcp_pos+3] << 8);
+        uint8_t op = pcd_asm[lcp_pos+4];
+        uint16_t addr = pcd_asm[lcp_pos+5] | (pcd_asm[lcp_pos+6] << 8);
+        if (op == 0x00) usb_write_block(addr, &pcd_asm[lcp_pos+7], rlen-2);
+        else if (op == 0x04) { usb_write(COMM_CODE_ADDR, addr); CY_HPI_MAILBOX = COMM_JUMP2CODE; msleep(50); }
+        lcp_pos += rlen + 5;
+    }
+    if (wait_ack()) uart_puts("OK\n"); else uart_puts("FAIL\n");
+
+
+    // 3. Load BIOS
+    uint32_t pos = 0;
+    while (pos < sizeof(de2_bios)) {
+        uint16_t tag = de2_bios[pos] | (de2_bios[pos+1] << 8);
+        if (tag != 0xc3b6) break;
+        uint16_t rlen = de2_bios[pos+2] | (de2_bios[pos+3] << 8);
+        uint8_t op = de2_bios[pos+4];
+        uint16_t addr = de2_bios[pos+5] | (de2_bios[pos+6] << 8);
+        if (op == 0x00) usb_write_block(addr, &de2_bios[pos+7], rlen-2);
+        else if (op == 0x04) { usb_write(COMM_CODE_ADDR, addr); CY_HPI_MAILBOX = COMM_JUMP2CODE; msleep(50); }
+        pos += rlen + 5;
+    }
+    uart_puts("BIOS OK\n");
+
+    // 4. Init Host SIE1
+    usb_write(HPI_SIE1_MSG_ADR, 0); usb_write(HOST1_STAT_REG, 0xffff); usb_write(HUSB_pEOT, 600);
+    usb_write(HPI_IRQ_ROUTING_REG, SOFEOP1_TO_CPU_EN | RESUME1_TO_HPI_EN);
+    usb_write(HOST1_IRQ_EN_REG, A_CHG_IRQ_EN | SOF_EOP_IRQ_EN);
+    usb_write(COMM_INT_NUM, HUSB_SIE1_INIT_INT); CY_HPI_MAILBOX = 0xCE01; wait_ack();
+    usb_write(COMM_INT_NUM, HUSB_RESET_INT); usb_write(COMM_R0, 0x003c); CY_HPI_MAILBOX = 0xCE01; wait_ack();
+    uart_puts("HOST OK\n");
+
+    uart_puts("POLLING...\n");
+    uint16_t msg = 0;
+    uint32_t conn_tick = 0;
+    while (msg != 0x1000) {
+        if (CY_HPI_STATUS & HPI_STATUS_SIE1MSG) {
+            msg = usb_read(HPI_SIE1_MSG_ADR);
+            usb_write(HPI_SIE1_MSG_ADR, 0);
+            char mbuf[5]; itoa_hex16(msg, mbuf);
+            uart_puts("MSG: "); uart_puts(mbuf); uart_puts("\n");
+        }
+        if ((conn_tick % 100000) == 0) {
+            uint16_t s1 = usb_read(0xC090); // HOST1_STAT
+            uint16_t c1 = usb_read(0xC08A); // USB1_CTL
+            uint16_t s2 = usb_read(0xC0B0); // HOST2_STAT
+            uint16_t c2 = usb_read(0xC0AA); // USB2_CTL
+            char buf[32];
+            uart_puts("S1:"); itoa_hex16(s1, hex); uart_puts(hex);
+            uart_puts(" C1:"); itoa_hex16(c1, hex); uart_puts(hex);
+            uart_puts(" S2:"); itoa_hex16(s2, hex); uart_puts(hex);
+            uart_puts(" C2:"); itoa_hex16(c2, hex); uart_puts(hex);
+            uart_puts("\n");
+            
+            // Clear status bits
+            usb_write(0xC090, s1);
+            usb_write(0xC0B0, s2);
+        }
+        conn_tick++;
+    }
+    uart_puts("CONNECTED\n");
+
+    // Address = 1, Config = 1
+    usb_write(0x0514, 0x0500); usb_write(0x0516, 0x0001); usb_write(0x0518, 0x0000); usb_write(0x051A, 0x0000);
+    write_td(0x0500, 0x0000, 8, 0x00D0, 0x0001, 0x0514); execute_td_sync(0x0500);
+    write_td(0x0500, 0x0000, 0, 0x0090, 0x0041, 0x0000); execute_td_sync(0x0500);
+    msleep(20);
+    usb_write(0x0514, 0x0900); usb_write(0x0516, 0x0001); usb_write(0x0518, 0x0000); usb_write(0x051A, 0x0000);
+    write_td(0x0500, 0x0000, 8, 0x01D0, 0x0001, 0x0514); execute_td_sync(0x0500);
+    write_td(0x0500, 0x0000, 0, 0x0190, 0x0041, 0x0000); execute_td_sync(0x0500);
+    uart_puts("ENUM OK\n");
+
+    uint16_t toggles[6] = {0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001};
     while (1) {
-        uint32_t sw = switches_in_read();
-        leds_r_out_write(sw);
-        leds_g_out_write(1 << (tick % 8));
-
-        if ((tick % 10) == 0) {
-            printf("Tick: %d, SW: 0x%08x\n", tick, sw);
+        for (int ep = 1; ep <= 3; ep++) {
+            write_td(0x0500, 0x0000, 8, 0x0190 | ep, toggles[ep], 0x0520);
+            if (execute_td_sync(0x0500) == 0x0003) {
+                toggles[ep] ^= 0x0040;
+                CY_HPI_ADDRESS = 0x0520;
+                uint16_t d0 = CY_HPI_DATA & 0xFFFF;
+                uint16_t d1 = CY_HPI_DATA & 0xFFFF;
+                uart_puts("EP"); itoa_hex16(ep, hex); uart_puts(hex); uart_puts(": ");
+                itoa_hex16(d0, hex); uart_puts(hex); uart_puts(" ");
+                itoa_hex16(d1, hex); uart_puts(hex); uart_puts("\n");
+                if (ep == 1 && d1 != 0) { uart_puts("KBD: "); itoa_hex16(d1, hex); uart_puts("\n"); }
+            }
         }
-
-        // --- Ethernet Deep Dive ---
-        uint8_t eth_addr = (sw & 0x20000) ? 17 : 16;
-        vga_puts_xy(2, 0, "ETH PORT:");
-        vga_puts_xy(2, 10, (sw & 0x20000) ? "1 (ADDR 17)" : "0 (ADDR 16)");
-
-        if (sw & 0x10000) {
-            vga_puts_xy(3, 30, "FORCING COPPER 1000M...");
-            mdio_write(eth_addr, 27, 0x000B);
-            mdio_write(eth_addr, 0, 0x9140);
-            msleep(100);
-        } else {
-            vga_puts_xy(3, 30, "AUTO-NEG MODE         ");
-        }
-
-        uint16_t bmsr2 = mdio_read(eth_addr, 1);
-        uint16_t r27 = mdio_read(eth_addr, 27);
-        uint16_t r10 = mdio_read(eth_addr, 10);
-        
-        vga_puts_xy(4, 0, "ETH STATUS:");
-        vga_puts_xy(4, 12, (bmsr2 & 0x0004) ? "LINK UP  " : "LINK DOWN");
-        vga_puts_xy(4, 25, (r27 & 0x0008) ? "FIBER" : "COPPER");
-        vga_puts_xy(4, 35, (r10 & 0x4000) ? "1000M" : "10/100");
-
-        vga_puts_xy(5, 0, "SR1:"); vga_put_hex16_xy(5, 5, bmsr2);
-        vga_puts_xy(5, 12, "R27:"); vga_put_hex16_xy(5, 17, r27);
-        vga_puts_xy(5, 24, "R10:"); vga_put_hex16_xy(5, 29, r10);
-        vga_puts_xy(5, 36, "INB:"); vga_put_hex16_xy(5, 41, (uint16_t)ethphy_rx_inband_status_read());
-
-        // --- USB timing sweep ---
-        uint8_t cycles = sw & 0x3F;
-        if (cycles < 6) cycles = 6;
-        uint8_t offset = (sw >> 6) & 0x3F;
-        
-        if (sw & 0x8000) {
-            CY_BRIDGE_CFG0 = 0x0001;
-            vga_puts_xy(8, 20, "USB RESET ACTIVE  ");
-        } else {
-            CY_BRIDGE_CFG0 = 0x0002 | (cycles << 2) | (offset << 8) | (8 << 14);
-            CY_BRIDGE_CFG0 |= 0x0001;
-            vga_puts_xy(8, 20, "USB RUNNING       ");
-        }
-
-        vga_puts_xy(8, 0, "USB HPI CFG:");
-        vga_puts_xy(9, 0, "CYCLES:"); vga_put_hex16_xy(9, 8, cycles);
-        vga_puts_xy(9, 15, "OFFSET:"); vga_put_hex16_xy(9, 23, offset);
-
-        CY_HPI_ADDRESS = 0x01B0;
-        uint16_t usb_val = (uint16_t)CY_HPI_DATA;
-        vga_puts_xy(11, 0, "HPI READ (01B0):");
-        vga_put_hex16_xy(11, 17, usb_val);
-
-        vga_puts_xy(13, 0, "TICKS:"); vga_put_hex16_xy(13, 7, (uint16_t)tick);
-
-        msleep(100);
-        tick++;
+        msleep(10);
     }
     return 0;
 }
