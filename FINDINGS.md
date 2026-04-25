@@ -1,35 +1,18 @@
-CPU is ALIVE and executing! Root cause was Quartus dropping VexRiscv due to absolute Linux paths in .qsf. Fixed, rebuilt, and verified VGA text output.
+CPU is ALIVE and executing! The system now includes robust diagnostic firmware and LiteScope analyzers for both Ethernet and USB subsystems.
 
-### UART Integration (April 2026)
-- **Status**: SUCCESS.
-- **Port**: COM3 (USB-to-RS232 adapter connected to DE2-115 DB9 port).
-- **Parameters**: 115200 baud, 8N1.
-- **Implementation**: Added LiteX `UART` peripheral. Mapped to physical pins `G9` (TX) and `G12` (RX) via `de2_115_vga_target.py` and `de2_115_vga_platform.py`.
-- **Verification**: Verified using `scripts/test_usb_kvm.py` and `monitor_uart.py`. Character echo and heartbeat verified.
-- **Build Workflow**:
-  1. Rebuild Firmware (Container): `docker exec litex_env /bin/bash /workspace/scripts/build_firmware.sh`
-  2. Regenerate SoC (Container): `docker exec litex_env /bin/bash /workspace/scripts/build_soc.sh 1` (Port 1)
-  3. Compile Bitstream (Host): `.\scripts\build_bitstream.ps1`
-  4. Load Bitstream (Host): `.\scripts\load_bitstream.ps1`
+### Current Status (April 2026)
+- **UART Integration**: SUCCESS (115200 baud, COM3).
+- **VGA Stability**: SUCCESS (Registered sync signals).
+- **USB HPI Bridge**: SUCCESS (Hardware verified, register access `0x04FE` confirmed).
+- **Ethernet**: Link UP (1000Mbps), but IP communication issues persist (ARP/Ping unreachable).
 
-### VGA Subsystem
-- **Current Status**: Functional for basic text console at 640x480 @ 60Hz.
-- **Resolution**: 80x30 text grid.
-- **Integration**: Custom `vga_text_console.v` bridged to Wishbone.
-- **Fixes**: Registered HSync/VSync signals for improved stability (April 2026). This resolved sync issues with capture cards and monitors.
+### Phase Status
+- **Phase 1 (Ethernet)**: Active. MDIO delay tuning and phase-shifted clock domains implemented.
+- **Phase 2 (USB)**: Active. HPI timing tuned and co-processor boot sequence implemented. Currently awaiting successful handshake (`0x1000` message).
+- **Phase 3 (Conformance)**: Deferred. Issue #4 created for USB-IF compliance.
 
-### Ethernet Subsystem
-- **Hardware**: Dual Marvell 88E1111 RGMII PHYs.
-- **Status**: PHY Link UP verified on Port 1 (PHY address 17).
-- **RGMII Inband Status**: Verified `0x000D` (1000Mbps, Full Duplex).
-- **Clocking**: Added 125MHz TX clock with 90-degree phase shift (`eth_tx_ps` domain) to resolve potential RGMII timing issues.
-- **Current Issue**: Board not responding to ARP or PING. IP `192.168.178.50` unreachable from host despite solid link.
-- **Next Steps**: Investigate RGMII TX data alignment or MAC address configuration.
-
-### USB Subsystem (CY7C67200)
-- **Status**: HPI Bridge VERIFIED.
-- **Registers**: Successfully reading Revision Register `0xC004` (Value: `0x04FE`).
-- **Memory**: Verified data integrity with write/read checks (`0x1234` check OK).
-- **Firmware**: LCP and DE2 BIOS loading implemented.
-- **Pin Fixes**: Resolved pin conflict on `C14` (removed unused `dack_n`). Corrected `rst_n` to `2.5 V` standard.
-- **KVM Integration**: `scripts/test_usb_kvm.py` implemented to drive HID inputs via Epiphan SDK and verify responses via UART.
+### Build Workflow
+1. Rebuild Firmware (Container): `docker exec litex_env /bin/bash /workspace/scripts/build_firmware.sh`
+2. Regenerate SoC (Container): `docker exec litex_env /bin/bash /workspace/scripts/build_soc.sh 1`
+3. Compile Bitstream (Host): `.\scripts\build_bitstream.ps1`
+4. Load Bitstream (Host): `.\scripts\load_bitstream.ps1`
