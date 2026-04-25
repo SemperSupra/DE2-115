@@ -1,0 +1,17 @@
+config,None,data_width,28
+config,None,depth,1024
+config,None,samplerate,1000000000000
+signal,0,de2_115vgamaster_ethcore_mac_core_source_valid,1
+signal,0,de2_115vgamaster_ethcore_mac_core_source_ready,1
+signal,0,de2_115vgamaster_ethcore_mac_core_source_first,1
+signal,0,de2_115vgamaster_ethcore_mac_core_source_last,1
+signal,0,de2_115vgamaster_ethcore_mac_core_source_payload_data,8
+signal,0,de2_115vgamaster_ethcore_mac_core_source_payload_last_be,1
+signal,0,de2_115vgamaster_ethcore_mac_core_source_payload_error,1
+signal,0,de2_115vgamaster_ethcore_mac_core_sink_valid,1
+signal,0,de2_115vgamaster_ethcore_mac_core_sink_ready,1
+signal,0,de2_115vgamaster_ethcore_mac_core_sink_first,1
+signal,0,de2_115vgamaster_ethcore_mac_core_sink_last,1
+signal,0,de2_115vgamaster_ethcore_mac_core_sink_payload_data,8
+signal,0,de2_115vgamaster_ethcore_mac_core_sink_payload_last_be,1
+signal,0,de2_115vgamaster_ethcore_mac_core_sink_payload_error,1

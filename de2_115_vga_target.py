@@ -161,7 +161,7 @@ class DE2_115VGAMaster(SoCCore):
         self.submodules.ethphy = LiteEthPHYRGMII(
             clock_pads = self.platform.request("eth_clocks", eth_port),
             pads       = self.platform.request("rgmii_eth", eth_port),
-            tx_clk     = self.crg.cd_eth_tx_ps.clk,
+            tx_clk     = self.crg.cd_eth.clk,
         )
         self.add_etherbone(
             phy=self.ethphy,
@@ -234,6 +234,7 @@ class DE2_115VGAMaster(SoCCore):
         # Drive USB strapping pins for HPI mode:
         # DREQ should be LOW, DACK# should be HIGH at reset de-assertion.
         self.comb += [
+            usb_pads.dack_n.eq(0b11),
         ]
 
         self.platform.add_source("CY7C67200_IF.v")
@@ -263,6 +264,9 @@ class DE2_115VGAMaster(SoCCore):
                 usb_pads.wr_n,
                 usb_pads.cs_n,
                 usb_pads.rst_n,
+                usb_pads.int0,
+                usb_pads.int1,
+                usb_pads.dreq,
                 self.usb_otg.dbg_probe,
             ],
             depth        = 2048,
@@ -270,6 +274,18 @@ class DE2_115VGAMaster(SoCCore):
             register     = True,
             csr_csv      = "analyzer.csv",
         )
+
+        if hasattr(self, "ethmac"):
+            self.submodules.eth_analyzer = LiteScopeAnalyzer(
+                [
+                    self.ethmac.core.source,
+                    self.ethmac.core.sink,
+                ],
+                depth        = 1024,
+                clock_domain = "sys",
+                register     = True,
+                csr_csv      = "eth_analyzer.csv"
+            )
 
         # Leave CY7C67200 boot-selection pins to the board straps. Driving HPI
         # data pins during reset caused readback to float high on this board.

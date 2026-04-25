@@ -5,10 +5,10 @@
 #include "lcp_blob.h"
 
 #define CY_BASE 0x82000000u
-#define CY_HPI_DATA    (*(volatile uint32_t *)(CY_BASE + 0x000))
-#define CY_HPI_MAILBOX (*(volatile uint32_t *)(CY_BASE + 0x004))
-#define CY_HPI_ADDRESS (*(volatile uint32_t *)(CY_BASE + 0x008))
-#define CY_HPI_STATUS  (*(volatile uint32_t *)(CY_BASE + 0x00C))
+#define CY_HPI_STATUS  (*(volatile uint32_t *)(CY_BASE + 0x000)) // A=0
+#define CY_HPI_MAILBOX (*(volatile uint32_t *)(CY_BASE + 0x004)) // A=1
+#define CY_HPI_ADDRESS (*(volatile uint32_t *)(CY_BASE + 0x008)) // A=2
+#define CY_HPI_DATA    (*(volatile uint32_t *)(CY_BASE + 0x00C)) // A=3
 #define CY_BRIDGE_CFG0 (*(volatile uint32_t *)(CY_BASE + 0x100))
 
 #define COMM_ACK               0x0FED
@@ -30,6 +30,57 @@
 #define A_CHG_IRQ_EN           0x0010
 #define SOF_EOP_IRQ_EN         0x0200
 #define HPI_STATUS_SIE1MSG     (1u << 4)
+
+// --- MDIO ---
+#define MDC (1u << CSR_ETHPHY_MDIO_W_MDC_OFFSET)
+#define MDO (1u << CSR_ETHPHY_MDIO_W_W_OFFSET)
+#define OE  (1u << CSR_ETHPHY_MDIO_W_OE_OFFSET)
+#define R   (1u << CSR_ETHPHY_MDIO_R_R_OFFSET)
+
+static void mdio_delay(void) {
+    for (volatile int i = 0; i < 100; i++);
+}
+
+static uint16_t mdio_read(uint8_t phy_addr, uint8_t reg_addr) {
+    uint32_t val = 0;
+    int i;
+    for (i = 0; i < 32; i++) {
+        ethphy_mdio_w_write(OE | MDC); mdio_delay();
+        ethphy_mdio_w_write(OE); mdio_delay();
+    }
+    uint32_t cmd = 0x60000000u | ((uint32_t)phy_addr << 23) | ((uint32_t)reg_addr << 18);
+    for (i = 0; i < 14; i++) {
+        uint32_t bit = (cmd & 0x80000000u) ? MDO : 0;
+        ethphy_mdio_w_write(OE | bit | MDC); mdio_delay();
+        ethphy_mdio_w_write(OE | bit); mdio_delay();
+        cmd <<= 1;
+    }
+    ethphy_mdio_w_write(MDC); mdio_delay();
+    ethphy_mdio_w_write(0); mdio_delay();
+    for (i = 0; i < 16; i++) {
+        ethphy_mdio_w_write(MDC); mdio_delay();
+        uint32_t bit = (ethphy_mdio_r_read() & R) ? 1 : 0;
+        ethphy_mdio_w_write(0); mdio_delay();
+        val = (val << 1) | bit;
+    }
+    return (uint16_t)val;
+}
+
+static void mdio_write(uint8_t phy_addr, uint8_t reg_addr, uint16_t data) {
+    int i;
+    for (i = 0; i < 32; i++) {
+        ethphy_mdio_w_write(OE | MDC); mdio_delay();
+        ethphy_mdio_w_write(OE); mdio_delay();
+    }
+    uint32_t cmd = 0x50020000u | ((uint32_t)phy_addr << 23) | ((uint32_t)reg_addr << 18) | (uint32_t)data;
+    for (i = 0; i < 32; i++) {
+        uint32_t bit = (cmd & 0x80000000u) ? MDO : 0;
+        ethphy_mdio_w_write(OE | bit | MDC); mdio_delay();
+        ethphy_mdio_w_write(OE | bit); mdio_delay();
+        cmd <<= 1;
+    }
+    ethphy_mdio_w_write(0); mdio_delay();
+}
 
 void msleep(uint32_t ms) {
     for (volatile int i = 0; i < ms * 10000; i++);
@@ -104,9 +155,23 @@ static int execute_td_sync(uint16_t td_addr) {
 
 int main(void) {
     char hex[5];
-    uart_init();
     uart_puts("USB KVM TEST START\n");
     
+    // Configure Marvell 88E1111 PHYs (Addresses 16 and 17) for internal RGMII delays
+    // Register 20: Extended PHY Specific Control Register
+    // Bit 1 (0x0002): RGMII RX Timing Control (add delay)
+    // Bit 7 (0x0080): RGMII TX Timing Control (add delay)
+    uart_puts("CONFIGURING MDIO DELAYS...\n");
+    uint16_t reg20_16 = mdio_read(16, 20);
+    mdio_write(16, 20, reg20_16 | 0x0082);
+    mdio_write(16, 0, 0x8000); // Soft reset to apply
+
+    uint16_t reg20_17 = mdio_read(17, 20);
+    mdio_write(17, 20, reg20_17 | 0x0082);
+    mdio_write(17, 0, 0x8000); // Soft reset to apply
+    msleep(100);
+    uart_puts("MDIO DELAYS CONFIGURED\n");
+
     // 0. Slow down HPI timing for stability
     // Bits 2-7: access_cycles. Let's use 20 (0x14)
     // Bit 0: force_rst_en = 0
@@ -138,7 +203,6 @@ int main(void) {
         lcp_pos += rlen + 5;
     }
     if (wait_ack()) uart_puts("OK\n"); else uart_puts("FAIL\n");
-
 
     // 3. Load BIOS
     uint32_t pos = 0;
@@ -177,7 +241,6 @@ int main(void) {
             uint16_t c1 = usb_read(0xC08A); // USB1_CTL
             uint16_t s2 = usb_read(0xC0B0); // HOST2_STAT
             uint16_t c2 = usb_read(0xC0AA); // USB2_CTL
-            char buf[32];
             uart_puts("S1:"); itoa_hex16(s1, hex); uart_puts(hex);
             uart_puts(" C1:"); itoa_hex16(c1, hex); uart_puts(hex);
             uart_puts(" S2:"); itoa_hex16(s2, hex); uart_puts(hex);
