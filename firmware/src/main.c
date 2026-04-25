@@ -241,12 +241,10 @@ int main(void) {
             uint16_t c1 = usb_read(0xC08A); // USB1_CTL
             uint16_t s2 = usb_read(0xC0B0); // HOST2_STAT
             uint16_t c2 = usb_read(0xC0AA); // USB2_CTL
-            uart_puts("S1:"); itoa_hex16(s1, hex); uart_puts(hex);
-            uart_puts(" C1:"); itoa_hex16(c1, hex); uart_puts(hex);
-            uart_puts(" S2:"); itoa_hex16(s2, hex); uart_puts(hex);
-            uart_puts(" C2:"); itoa_hex16(c2, hex); uart_puts(hex);
-            uart_puts("\n");
             
+            // Heartbeat on LEDs
+            leds_g_out_write(1 << ((conn_tick / 100000) % 8));
+
             // Clear status bits
             usb_write(0xC090, s1);
             usb_write(0xC0B0, s2);
