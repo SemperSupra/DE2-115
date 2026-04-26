@@ -31,6 +31,8 @@ device.
 - `FINDINGS.md`: current evidence and open blockers.
 - `ETHERNET_BASELINE.md`: preserved working Ethernet settings, code paths,
   build commands, validation results, and tracked validation image details.
+- `DEVICE_STATUS_AND_BRINGUP.md`: board-wide device status matrix and staged
+  strategy for bringing up every remaining DE2-115 peripheral.
 - `PROJECT_MAP.md`: directory map, file roles, and suggested workflow.
 - `de2_115_vga_platform.py`: DE2-115 pin mapping extensions.
 - `de2_115_vga_target.py`: LiteX SoC definition and Ethernet/USB integration.
@@ -114,8 +116,9 @@ peripheral coverage:
   nonzero data during HPI read cycles.
 - Gigabit Ethernet: deferred backlog item; do not mix it with the current USB
   debug path.
-- Next target after Ethernet/USB: SD card, because LiteSDCard is already
-  instantiated and block storage gives a high-value, deterministic test target.
+- Board-wide plan: follow `DEVICE_STATUS_AND_BRINGUP.md`. Next target after
+  Ethernet/USB is SD card, because LiteSDCard is already instantiated and block
+  storage gives a high-value, deterministic test target.
 
 SignalTap captures must be run from an elevated Windows PowerShell on the host,
 not from Docker:

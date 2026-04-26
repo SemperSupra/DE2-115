@@ -100,6 +100,9 @@ The complete preserved Ethernet baseline is documented in
 `ETHERNET_BASELINE.md`; check it before changing Ethernet, USB, clocks, or PHY
 setup.
 
+The complete board-wide device matrix and remaining peripheral strategy are in
+`DEVICE_STATUS_AND_BRINGUP.md`.
+
 ### Action 2.2: Later Gigabit Cleanup
 
 Use source/probe or SignalTap to restore gigabit RGMII only after USB is unblocked or deliberately paused. This is a backlog item, not part of the current robustness scope.
@@ -138,7 +141,7 @@ Once unblocked:
 
 ## Phase 4: Whole-Board Device Strategy
 
-After Ethernet and USB have stable pass/fail tests, target SD card next. It is already instantiated, useful for loading assets/logs, and testable with deterministic block-read/block-write/FatFS checks.
+After Ethernet and USB have stable pass/fail tests, target SD card next. It is already instantiated, useful for loading assets/logs, and testable with deterministic block-read/block-write/FatFS checks. Track full-board progress in `DEVICE_STATUS_AND_BRINGUP.md`.
 
 Standard per-device bring-up rule:
 

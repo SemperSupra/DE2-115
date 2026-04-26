@@ -8,6 +8,9 @@ Date: 2026-04-26
 - **VGA:** Working.
 - **Ethernet:** Port 1 is the active/default port and is working in the forced-MII low-speed path. AUTO10/100, 100-only, and 10-only variants each passed 50/50 ping to `192.168.178.50` plus 512 Etherbone red-LED CSR write/read loops through host TCP port `1235`. The current 10-only image also passed a longer 200/200 ping plus 4096 red-LED CSR loop regression.
 - **USB:** HPI address decode, HPI register order, write timing, and reset control have been corrected. HPI write data is visible on the bus, but CY7C67200 reads still return `0x0000`. A reset/sample-offset sweep over Etherbone also returned only zeroes.
+- **Board-wide device matrix:** `DEVICE_STATUS_AND_BRINGUP.md` now records the
+  current status of every DE2-115 device class and the staged bring-up plan for
+  remaining peripherals.
 
 ## Evidence
 

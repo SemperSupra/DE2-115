@@ -12,6 +12,8 @@ Workspace: `C:\Users\Mark\Projects\DE2-115`
 - **Preservation manifest:** `ETHERNET_BASELINE.md` now records the working
   Ethernet settings, code paths, build commands, validation results, and
   regression rule in one place.
+- **Board-wide device plan:** `DEVICE_STATUS_AND_BRINGUP.md` records the
+  status of each DE2-115 device and the staged strategy for remaining bring-up.
 - **USB HPI:** The FPGA-side HPI bridge now decodes the USB window correctly, uses Terasic-style registered HPI control/data timing, and successfully drives write data onto the bus. The CY7C67200 still returns `0x0000` on all read attempts, including basic control registers and memory readback, so LCP/BIOS ACK still fails. Etherbone-driven reset and HPI sample-offset sweeps also returned only zeroes.
 
 ## Changes Since Previous Handoff
@@ -127,4 +129,6 @@ python scripts\ethernet_low_speed_test.py --ping-count 50 --csr-loops 512 --bind
 3. Compare the same board against a known-good Terasic USB demo bitstream to rule out board/CY7C67200 hardware state.
 4. Once USB readback works, resume LCP load verification and mailbox ACK flow.
 5. Keep gigabit Ethernet deferred in the backlog; later add a separate gigabit cleanup task using `ETH0`/`ETX0` captures.
-6. Start SD card bring-up after USB is unblocked enough to avoid losing the hardware-debug thread.
+6. Use `DEVICE_STATUS_AND_BRINGUP.md` as the board-wide backlog. Start SD card
+   bring-up after USB is unblocked enough to avoid losing the hardware-debug
+   thread.

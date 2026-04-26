@@ -36,6 +36,9 @@
   - Evidence-based findings and blockers.
 - `ETHERNET_BASELINE.md`
   - Preservation manifest for the working Ethernet Port 1 low-speed baseline.
+- `DEVICE_STATUS_AND_BRINGUP.md`
+  - Full DE2-115 device matrix, current status, pass criteria, and staged
+    bring-up strategy for remaining peripherals.
 - `EXECUTION_PLAN.md`
   - Prioritized engineering plan.
 - `SIGNALTAP_STRATEGY.md`
