@@ -29,12 +29,13 @@ integration.
 | SDRAM | Integrated, unvalidated | `GENSDRPHY` and `add_sdram()` are in the SoC and firmware runs with the generated image, but no explicit recent RAM test is recorded. | Add walking-bit, address-line, burst, and LiteX memory-test pass/fail output over UART and Etherbone. |
 | UART / RS232 diagnostic port | Validated | COM3 at 115200 baud is the primary diagnostic channel. | Preserve as first-line debug; add a short serial loopback/throughput test if using full RS232 externally. |
 | VGA | Working, needs regression | VGA output is documented as working with the text-console/test output. | Add a deterministic test pattern/text-screen mode and capture checklist. |
-| Red LEDs | Validated | Etherbone regression stresses red LED CSR write/read for 512 loops; 10 Mbps image passed 4096 loops. | Keep red LEDs as stable CSR stress target. |
-| Green LEDs | Working, needs regression | Firmware heartbeat uses green LEDs; host test can probe them but does not use them for sustained stress. | Add a firmware-owned LED pattern test and document ownership to avoid host/firmware contention. |
-| 7-segment displays | Integrated, unvalidated | GPIO outputs for all eight displays are instantiated. | Add firmware and Etherbone digit-pattern test: all off, all on, `0`-`F`, walking segment. |
-| Switches | Integrated, unvalidated | GPIO input for 18 switches is instantiated. | Add UART/Etherbone readback test and compare against manual switch patterns. |
+| Red LEDs | Validated | Etherbone regression stresses red LED CSR write/read for 512 loops; 10 Mbps image passed 4096 loops; 2026-04-26 visual self-test captured top LED bank patterns. | Keep red LEDs as stable CSR stress target. |
+| Green LEDs | Validated, ownership caveat | Firmware heartbeat uses green LEDs; host GPIO smoke test probed `0x5a`; 2026-04-26 visual self-test captured green LED activity. | Keep ownership explicit when using green LEDs from host tests to avoid host/firmware contention. |
+| 7-segment displays | Validated, basic patterns | Etherbone GPIO smoke test wrote/read all eight display CSRs; 2026-04-26 visual self-test captured digit-pattern activity on all eight displays. | Add exhaustive walking-segment and `0`-`F` visual checklist later if segment-by-segment acceptance is needed. |
+| Switches | Working, needs manual walk | Etherbone readback returned current physical switch vector `0x00000008`; 2026-04-26 visual evidence shows switch bank. | Manually walk all 18 switches through 0/1 positions while reading CSR before marking every switch independently validated. |
 | Pushbuttons | Partially used | KEY0 is reset; other button GPIO use is not documented. | Add debounced GPIO readback for KEY1-KEY3; keep KEY0 as reset unless intentionally changed. |
-| LCD 16x2 character module | Integrated, unvalidated | LCD GPIO output is instantiated. | Add HD44780-compatible init, write `DE2-115 OK`, cursor/clear tests, and visual checklist. |
+| LCD 16x2 character module | Validated, basic text | Host-driven HD44780 GPIO init wrote `DE2-115 SELFTEST` / `SW=00008`; 2026-04-26 agentwebcam evidence captured the text on the module. | Add firmware-native LCD summary later so the board can self-report without a host script. |
+| Board/device indicator LEDs | Working, needs regression | 2026-04-26 visual evidence includes the power/connector/device LED region; indicators are visible and useful for board state while tests run. | Map each indicator to its source/device and define expected on/blink/off semantics per test mode. |
 | Ethernet Port 1 10/100 | Validated | `AUTO10/100`, `100-only`, and `10-only` pass ping and Etherbone CSR stress. Tracked 10 Mbps validation image exists. | Keep `scripts/ethernet_low_speed_test.py` as regression gate before/after USB or clock changes. |
 | Ethernet Port 1 1 Gb | Deferred | GTX pin/resource work is preserved, but current stable path forces MII/10-100. | Resume only after USB is stable; use `ETH0`/`ETX0` source-probe/SignalTap and fix timing/constraints. |
 | Ethernet Port 0 | Not started | Current target is Port 1; PHY16 is treated as absent/floating in current evidence. | Audit cable/PHY address/pins, then repeat MDIO, link, ping, and Etherbone tests independently. |
@@ -119,10 +120,14 @@ python scripts\ethernet_low_speed_test.py --ping-count 50 --csr-loops 512 --bind
 
 1. **Switches and buttons**
    - UART and Etherbone readback with expected bit masks.
+   - Current switch vector capture is automated; full validation requires a
+     manual switch walk.
 2. **7-segment displays**
-   - Walking segment and hex digit pattern.
+   - Basic digit patterns are now captured; add walking-segment evidence if a
+     segment-by-segment acceptance log is needed.
 3. **LCD**
-   - Initialize and print firmware version/IP/test result.
+   - Basic HD44780 text is now captured; move this into firmware and print
+     version/IP/test result.
 4. **PS/2**
    - Keyboard scancode test, then mouse packet test.
 5. **IR**

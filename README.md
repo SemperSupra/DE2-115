@@ -15,6 +15,10 @@ device.
   10-only firmware variants each passed 50/50 ping to `192.168.178.50` plus 512
   Etherbone red-LED CSR write/read loops through `litex_server` on host TCP port
   `1235`. Gigabit mode is intentionally deferred to the backlog.
+- Board GPIO/visual self-test is now available. Red LEDs, green LEDs, 7-seg
+  display CSRs, LCD GPIO, and the current switch vector pass the host GPIO smoke
+  test; `agentwebcam` camera `1` captured the LCD/top LED/7-seg/device-indicator
+  view during the visual self-test.
 - USB HPI register ordering, local address decode, and unverified DACK pin
   assignment have been fixed. The FPGA now drives HPI write data correctly,
   confirmed by debug readback showing `sample=00001234 cy=00001234` during a
@@ -40,6 +44,11 @@ device.
 - `cy7c67200_wb_bridge.v`: Wishbone-to-HPI bridge.
 - `CY7C67200_IF.v`: registered HPI pad wrapper based on the Terasic reference.
 - `firmware/src/main.c`: diagnostic firmware, MDIO setup, HPI tests, and USB bring-up logic.
+- `scripts/board_gpio_smoke_test.py`: Etherbone smoke test for switches, LEDs,
+  7-seg CSRs, and LCD GPIO.
+- `scripts/visual_board_selftest.py`: host-driven LCD/LED/7-seg visual test
+  with `agentwebcam` screenshot/video capture.
+- `scripts/capture_uart.py`: bounded COM-port capture helper for boot logs.
 - `validation_images/`: tracked known-good `.sof` images. The current saved
   image is the Port 1 10 Mbps Ethernet validation build.
 
@@ -86,6 +95,22 @@ Low-speed Ethernet regression:
 ```powershell
 python scripts\ethernet_low_speed_test.py --ping-count 50 --csr-loops 512 --bind-port 1235
 ```
+
+Board GPIO smoke test:
+
+```powershell
+python scripts\board_gpio_smoke_test.py --start-server --port 1239
+```
+
+Visual board self-test and capture:
+
+```powershell
+agentwebcam list --limit 10
+python scripts\visual_board_selftest.py --start-server --port 1238 --camera 1 --capture-backend agentwebcam --duration 10 --state-seconds 2 --hold 1 --width 1920 --height 1080 --fps 15
+```
+
+In the current physical setup, `agentwebcam` camera `1` is the board view.
+Camera `0` is not useful for this board validation image.
 
 The tracked 10 Mbps validation image is:
 

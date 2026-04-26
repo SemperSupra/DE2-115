@@ -48,6 +48,12 @@
 #define ETH_SPEED_100_ONLY   100
 #define ETH_SPEED_10_ONLY    10
 
+#ifndef DE2_RUN_SDRAM_TEST
+#define DE2_RUN_SDRAM_TEST 0
+#endif
+
+#define BOARDTEST_SDRAM_WORDS 1024
+
 // --- MDIO ---
 #define MDC (1u << CSR_ETHPHY_MDIO_W_MDC_OFFSET)
 #define MDO (1u << CSR_ETHPHY_MDIO_W_W_OFFSET)
@@ -159,6 +165,157 @@ static void uart_puthex8(uint8_t value) {
 static void uart_puthex32(uint32_t value) {
     uart_puthex16((uint16_t)(value >> 16));
     uart_puthex16((uint16_t)value);
+}
+
+static int boardtest_sdram(void) {
+#if DE2_RUN_SDRAM_TEST
+#if defined(MAIN_RAM_BASE) && defined(MAIN_RAM_SIZE)
+    volatile uint32_t *ram = (volatile uint32_t *)MAIN_RAM_BASE;
+    uint32_t words = BOARDTEST_SDRAM_WORDS;
+    uint32_t max_words = MAIN_RAM_SIZE / sizeof(uint32_t);
+    uint32_t saved_first = ram[0];
+    uint32_t saved_last = ram[words - 1];
+
+    if (words > max_words) {
+        words = max_words;
+    }
+    if (words < 2) {
+        return 0;
+    }
+
+    for (uint32_t i = 0; i < words; i++) {
+        ram[i] = 0xA5A50000u ^ i;
+    }
+    for (uint32_t i = 0; i < words; i++) {
+        uint32_t expected = 0xA5A50000u ^ i;
+        if (ram[i] != expected) {
+            uart_puts("BOARDTEST SDRAM FAIL addr=");
+            uart_puthex32((uint32_t)&ram[i]);
+            uart_puts(" got=");
+            uart_puthex32(ram[i]);
+            uart_puts(" exp=");
+            uart_puthex32(expected);
+            uart_puts("\n");
+            ram[0] = saved_first;
+            ram[words - 1] = saved_last;
+            return 0;
+        }
+    }
+
+    for (uint32_t bit = 0; bit < 32; bit++) {
+        uint32_t value = 1u << bit;
+        ram[0] = value;
+        if (ram[0] != value) {
+            uart_puts("BOARDTEST SDRAM DQ FAIL bit=");
+            uart_puthex32(bit);
+            uart_puts("\n");
+            ram[0] = saved_first;
+            ram[words - 1] = saved_last;
+            return 0;
+        }
+    }
+
+    ram[0] = saved_first;
+    ram[words - 1] = saved_last;
+    return 1;
+#else
+    return 0;
+#endif
+#else
+    return -1;
+#endif
+}
+
+static void boardtest_set_hex_digit(int index, uint32_t value) {
+    switch (index) {
+#ifdef CSR_HEX0_OUT_ADDR
+    case 0: hex0_out_write(value); break;
+#endif
+#ifdef CSR_HEX1_OUT_ADDR
+    case 1: hex1_out_write(value); break;
+#endif
+#ifdef CSR_HEX2_OUT_ADDR
+    case 2: hex2_out_write(value); break;
+#endif
+#ifdef CSR_HEX3_OUT_ADDR
+    case 3: hex3_out_write(value); break;
+#endif
+#ifdef CSR_HEX4_OUT_ADDR
+    case 4: hex4_out_write(value); break;
+#endif
+#ifdef CSR_HEX5_OUT_ADDR
+    case 5: hex5_out_write(value); break;
+#endif
+#ifdef CSR_HEX6_OUT_ADDR
+    case 6: hex6_out_write(value); break;
+#endif
+#ifdef CSR_HEX7_OUT_ADDR
+    case 7: hex7_out_write(value); break;
+#endif
+    default: break;
+    }
+}
+
+static void boardtest_gpio_banner(void) {
+    static const uint8_t raw_digit_pattern[8] = {
+        0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07
+    };
+
+    uart_puts("BOARDTEST START\n");
+    uart_puts("BOARDTEST build=DE2-115 ");
+#if DE2_ETH_SPEED_MODE == ETH_SPEED_100_ONLY
+    uart_puts("eth=100\n");
+#elif DE2_ETH_SPEED_MODE == ETH_SPEED_10_ONLY
+    uart_puts("eth=10\n");
+#else
+    uart_puts("eth=AUTO10/100\n");
+#endif
+
+#ifdef CSR_SWITCHES_IN_ADDR
+    uart_puts("BOARDTEST switches=");
+    uart_puthex32(switches_in_read());
+    uart_puts("\n");
+#endif
+
+#ifdef CSR_LEDS_R_OUT_ADDR
+    leds_r_out_write(0x00015555);
+    msleep(80);
+    leds_r_out_write(0x0000AAAA);
+    msleep(80);
+    leds_r_out_write(0x00000000);
+    uart_puts("BOARDTEST leds_r PATTERN\n");
+#endif
+
+#ifdef CSR_LEDS_G_OUT_ADDR
+    leds_g_out_write(0x00000055);
+    msleep(80);
+    leds_g_out_write(0x000000AA);
+    msleep(80);
+    uart_puts("BOARDTEST leds_g PATTERN\n");
+#endif
+
+    for (int i = 0; i < 8; i++) {
+        boardtest_set_hex_digit(i, raw_digit_pattern[i]);
+    }
+    uart_puts("BOARDTEST seven_seg RAW01234567\n");
+
+#ifdef CSR_LCD_OUT_ADDR
+    lcd_out_write(0x00000003);
+    msleep(10);
+    lcd_out_write(0x00000000);
+    uart_puts("BOARDTEST lcd GPIO TOGGLE\n");
+#endif
+
+    uart_puts("BOARDTEST sdram=");
+    int sdram_result = boardtest_sdram();
+    if (sdram_result > 0) {
+        uart_puts("PASS\n");
+    } else if (sdram_result == 0) {
+        uart_puts("FAIL\n");
+    } else {
+        uart_puts("SKIP\n");
+    }
+    uart_puts("BOARDTEST END\n");
 }
 
 static void usb_write(uint16_t addr, uint16_t data) {
@@ -343,6 +500,7 @@ static int execute_td_sync(uint16_t td_addr) {
 int main(void) {
     char hex[5];
     uart_puts("USB KVM TEST START\n");
+    boardtest_gpio_banner();
     
     // Configure Marvell 88E1111 PHYs (Addresses 16 and 17) for internal RGMII delays
     // Register 20: Extended PHY Specific Control Register

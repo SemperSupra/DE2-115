@@ -8,6 +8,10 @@ Workspace: `C:\Users\Mark\Projects\DE2-115`
 - **UART:** Working on COM3 at 115200 baud and used for all current board diagnostics.
 - **VGA:** Working and stable enough for bring-up.
 - **Ethernet:** Port 1 is now working in forced-MII low-speed mode. AUTO10/100, 100-only, and 10-only variants each passed 50/50 ping to `192.168.178.50` plus 512 Etherbone red-LED CSR write/read loops through `litex_server` on host TCP port `1235`. The current 10-only image also passed a longer 200/200 ping plus 4096 red-LED CSR loop regression.
+- **GPIO/visual self-test:** The current AUTO10/100 image includes board-test
+  hooks for LEDs, switches, 7-seg, and LCD. Host GPIO smoke test passed, and
+  `agentwebcam` camera `1` captured board screenshots/video during the visual
+  self-test.
 - **Saved image:** The 10-only validation `.sof` is tracked at `validation_images/de2_115_vga_platform_eth10_validated_20260426.sof` with SHA256 `B886FAC43010C039237CBC94BE316AEF1796E6496DE63DEAD67AFB032FB9373A`.
 - **Preservation manifest:** `ETHERNET_BASELINE.md` now records the working
   Ethernet settings, code paths, build commands, validation results, and
@@ -39,18 +43,44 @@ Workspace: `C:\Users\Mark\Projects\DE2-115`
 - Added `scripts/ethernet_low_speed_test.py` to run the repeatable low-speed
   Ethernet regression: ping, `litex_server`, LiteX identifier read, green LED
   CSR probe, and red LED CSR write/read stress.
+- Added firmware board-test hooks that print a `BOARDTEST` banner and exercise
+  red LEDs, green LEDs, eight 7-segment display CSRs, LCD GPIO, and optional
+  SDRAM scratch testing.
+- Added `scripts/board_gpio_smoke_test.py` for repeatable Etherbone GPIO smoke
+  testing.
+- Added `scripts/visual_board_selftest.py` for host-driven LCD text, LED/7-seg
+  visual patterns, and `agentwebcam` screenshot/video capture.
+- Added `scripts/capture_uart.py` for bounded UART boot-log capture.
 
 ## Latest Verified Board Log
 
-Key lines from the 10-only validation image programmed on 2026-04-26:
+Key lines from the current AUTO10/100 image programmed on 2026-04-26 at
+16:52:53, checksum `0x033F25A3`:
 
 ```text
 Ping statistics for 192.168.178.50:
-    Packets: Sent = 200, Received = 200, Lost = 0 (0% loss)
+    Packets: Sent = 50, Received = 50, Lost = 0 (0% loss)
 
 IDENT_PREFIX 'LiteX VGA Test SoC on DE'
-ETHERBONE_CSR_STRESS_OK loops=4096 ...
+ETHERBONE_CSR_STRESS_OK loops=512 ...
 ETHERNET_LOW_SPEED_TEST_PASS
+
+SWITCHES 0x00000008
+LEDS_R_RW_OK
+LEDS_G_PROBE 0x0000005a
+SEVEN_SEG_RW_OK
+LCD_GPIO_RW_OK
+BOARD_GPIO_SMOKE_TEST_PASS
+```
+
+Visual self-test artifacts from `agentwebcam` camera `1`:
+
+```text
+SCREENSHOT local_artifacts\screenshots\board_visual_selftest_20260426_170047.jpg
+VIDEO local_artifacts\videos\board_visual_selftest_20260426_170047.mp4
+CROP local_artifacts\screenshots\board_visual_selftest_20260426_170047_switches_red_leds_7seg.jpg
+CROP local_artifacts\screenshots\board_visual_selftest_20260426_170047_lcd.jpg
+CROP local_artifacts\screenshots\board_visual_selftest_20260426_170047_device_leds_connectors.jpg
 ```
 
 USB evidence from the current blocker remains:
@@ -122,9 +152,21 @@ Ethernet regression:
 python scripts\ethernet_low_speed_test.py --ping-count 50 --csr-loops 512 --bind-port 1235
 ```
 
+Board GPIO smoke test:
+
+```powershell
+python scripts\board_gpio_smoke_test.py --start-server --port 1239
+```
+
+Visual self-test capture through the physical board camera:
+
+```powershell
+python scripts\visual_board_selftest.py --start-server --port 1238 --camera 1 --capture-backend agentwebcam --duration 10 --state-seconds 2 --hold 1 --width 1920 --height 1080 --fps 15
+```
+
 ## Remaining Work
 
-1. Keep `scripts/ethernet_low_speed_test.py` as the acceptance gate before/after USB changes. Current programmed image is 10-only checksum `0x033D6EDD`; rebuild/program default AUTO10/100 if the board should be left in the general-purpose baseline.
+1. Keep `scripts/ethernet_low_speed_test.py` as the acceptance gate before/after USB changes. Current programmed image is the general-purpose AUTO10/100 board-test image, checksum `0x033F25A3`; the tracked 10-only validation image remains preserved in `validation_images/`.
 2. Capture external USB HPI pins with SignalTap or a logic analyzer during the read cycle: `OTG_DATA[15:0]`, `OTG_ADDR[1:0]`, `OTG_CS_N`, `OTG_RD_N`, `OTG_WR_N`, `OTG_RST_N`, and `OTG_INT`.
 3. Compare the same board against a known-good Terasic USB demo bitstream to rule out board/CY7C67200 hardware state.
 4. Once USB readback works, resume LCP load verification and mailbox ACK flow.
@@ -132,3 +174,6 @@ python scripts\ethernet_low_speed_test.py --ping-count 50 --csr-loops 512 --bind
 6. Use `DEVICE_STATUS_AND_BRINGUP.md` as the board-wide backlog. Start SD card
    bring-up after USB is unblocked enough to avoid losing the hardware-debug
    thread.
+7. To fully validate all 18 switches, manually walk each switch and record the
+   `switches_in` CSR value; current evidence validates the physical vector
+   `0x00000008`, not every switch independently.
