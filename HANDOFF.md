@@ -9,6 +9,9 @@ Workspace: `C:\Users\Mark\Projects\DE2-115`
 - **VGA:** Working and stable enough for bring-up.
 - **Ethernet:** Port 1 is now working in forced-MII low-speed mode. AUTO10/100, 100-only, and 10-only variants each passed 50/50 ping to `192.168.178.50` plus 512 Etherbone red-LED CSR write/read loops through `litex_server` on host TCP port `1235`. The current 10-only image also passed a longer 200/200 ping plus 4096 red-LED CSR loop regression.
 - **Saved image:** The 10-only validation `.sof` is tracked at `validation_images/de2_115_vga_platform_eth10_validated_20260426.sof` with SHA256 `B886FAC43010C039237CBC94BE316AEF1796E6496DE63DEAD67AFB032FB9373A`.
+- **Preservation manifest:** `ETHERNET_BASELINE.md` now records the working
+  Ethernet settings, code paths, build commands, validation results, and
+  regression rule in one place.
 - **USB HPI:** The FPGA-side HPI bridge now decodes the USB window correctly, uses Terasic-style registered HPI control/data timing, and successfully drives write data onto the bus. The CY7C67200 still returns `0x0000` on all read attempts, including basic control registers and memory readback, so LCP/BIOS ACK still fails. Etherbone-driven reset and HPI sample-offset sweeps also returned only zeroes.
 
 ## Changes Since Previous Handoff

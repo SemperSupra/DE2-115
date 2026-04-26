@@ -34,6 +34,8 @@
   - Current board-tested handoff, latest UART evidence, and next steps.
 - `FINDINGS.md`
   - Evidence-based findings and blockers.
+- `ETHERNET_BASELINE.md`
+  - Preservation manifest for the working Ethernet Port 1 low-speed baseline.
 - `EXECUTION_PLAN.md`
   - Prioritized engineering plan.
 - `SIGNALTAP_STRATEGY.md`

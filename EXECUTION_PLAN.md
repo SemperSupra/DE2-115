@@ -96,6 +96,10 @@ The board is currently programmed with the 10-only validation image. Rebuild/pro
 The 10-only validation image is tracked in git at
 `validation_images/de2_115_vga_platform_eth10_validated_20260426.sof`.
 
+The complete preserved Ethernet baseline is documented in
+`ETHERNET_BASELINE.md`; check it before changing Ethernet, USB, clocks, or PHY
+setup.
+
 ### Action 2.2: Later Gigabit Cleanup
 
 Use source/probe or SignalTap to restore gigabit RGMII only after USB is unblocked or deliberately paused. This is a backlog item, not part of the current robustness scope.
