@@ -7,7 +7,7 @@ Date: 2026-04-26
 - **CPU/UART:** VexRiscv firmware is executing and UART diagnostics are reliable on COM3 at 115200 baud.
 - **VGA:** Working.
 - **Ethernet:** Port 1 is the active/default port and is working in the forced-MII low-speed path. AUTO10/100, 100-only, and 10-only variants each passed 50/50 ping to `192.168.178.50` plus 512 Etherbone red-LED CSR write/read loops through host TCP port `1235`. The current 10-only image also passed a longer 200/200 ping plus 4096 red-LED CSR loop regression.
-- **GPIO/visual self-test:** The current AUTO10/100 board image includes a host-driven visual self-test path. Red LEDs, green LEDs, 7-segment display CSRs, LCD GPIO, and the current switch vector were exercised over Etherbone and captured with `agentwebcam`.
+- **GPIO/visual self-test:** The current AUTO10/100 board image includes a host-driven visual self-test path. Red LEDs, green LEDs, 7-segment display CSRs, LCD GPIO, and the current switch vector were exercised over Etherbone and captured with `agentwebcam`. The switch pin map has been corrected; all aligned switches now read `0x00000000`.
 - **USB:** HPI address decode, HPI register order, write timing, and reset control have been corrected. HPI write data is visible on the bus, but CY7C67200 reads still return `0x0000`. A reset/sample-offset sweep over Etherbone also returned only zeroes.
 - **Board-wide device matrix:** `DEVICE_STATUS_AND_BRINGUP.md` now records the
   current status of every DE2-115 device class and the staged bring-up plan for
@@ -27,25 +27,26 @@ ETHERNET_LOW_SPEED_TEST_PASS
 ```
 
 Latest GPIO/visual evidence from the current AUTO10/100 image programmed with
-checksum `0x033F25A3`:
+checksum `0x033CA203`:
 
 ```text
 IDENT_PREFIX 'LiteX VGA Test SoC on DE'
-SWITCHES 0x00000008
+SWITCHES 0x00000000
 LEDS_R_RW_OK
 LEDS_G_PROBE 0x0000005a
 SEVEN_SEG_RW_OK
 LCD_GPIO_RW_OK
 BOARD_GPIO_SMOKE_TEST_PASS
 
-SCREENSHOT local_artifacts\screenshots\board_visual_selftest_20260426_170047.jpg
-VIDEO local_artifacts\videos\board_visual_selftest_20260426_170047.mp4
-SWITCHES_FINAL 0x00000008
+SCREENSHOT local_artifacts\screenshots\board_visual_selftest_20260426_172358.jpg
+VIDEO local_artifacts\videos\board_visual_selftest_20260426_172358.mp4
+SWITCHES_FINAL 0x00000000
 VISUAL_BOARD_SELFTEST_CAPTURE_PASS
 ```
 
 Useful extracted evidence frames/crops:
 
+- `local_artifacts\screenshots\board_visual_selftest_20260426_172358.jpg`
 - `local_artifacts\screenshots\board_visual_selftest_20260426_170047_frame_0.5s.jpg`
 - `local_artifacts\screenshots\board_visual_selftest_20260426_170047_switches_red_leds_7seg.jpg`
 - `local_artifacts\screenshots\board_visual_selftest_20260426_170047_lcd.jpg`
@@ -110,13 +111,19 @@ SIE1_INIT NOACK mb=0000 st=0000
   is the physical board view in the current setup; camera `0` is not useful for
   board visual evidence.
 - The LCD accepted HD44780 8-bit initialization through the raw `lcd_out` CSR
-  and displayed `DE2-115 SELFTEST` with `SW=00008`.
+  and displayed `DE2-115 SELFTEST` with the current switch vector.
 - The 7-segment displays and top LED bank visibly changed during the recorded
   self-test, though the seven-segment LEDs overexpose in still images. The
   high-resolution video is the best evidence for state changes.
-- Switch CSR readback worked for the current physical switch vector
-  `0x00000008`. Full independent validation of all 18 switches still requires a
-  manual walk of each switch while logging the CSR value.
+- The previous `switches_in=0x00000008` result was a pin-map bug, not switch
+  hardware state. The project had skipped official `SW[2]=AC27` and assigned
+  `AD28` as a switch input; Terasic references use `AD28` for `HSMC_CLKOUT0`.
+  The corrected map is `SW[0..17] = AB28 AC28 AC27 AD27 AB27 AC26 AD26 AB26
+  AC25 AB25 AC24 AB24 AB23 AA24 AA23 AA22 Y24 Y23`.
+- After rebuilding and programming the corrected image, all aligned switches
+  read `0x00000000`, matching the board view. Full independent validation of
+  all 18 switches still requires a manual walk of each switch while logging the
+  CSR value.
 - Device/connector indicator LEDs are visible in the captured board view and are
   useful for operator feedback, but their exact semantic mapping still needs a
   per-device expected-state table.
@@ -129,8 +136,8 @@ SIE1_INIT NOACK mb=0000 st=0000
 - Board programmed with the 10-only validation image on 2026-04-26 at 15:53:51, checksum `0x033D6EDD`; ping and Etherbone CSR stress tests passed after programming.
 - A copy of that validation image is tracked at `validation_images/de2_115_vga_platform_eth10_validated_20260426.sof`.
 - Validation image SHA256: `B886FAC43010C039237CBC94BE316AEF1796E6496DE63DEAD67AFB032FB9373A`.
-- Current board image after the visual-self-test work is the default AUTO10/100
-  image with board-test firmware hooks, checksum `0x033F25A3`. Post-capture
+- Current board image after the switch pin-map fix is the default AUTO10/100
+  image with board-test firmware hooks, checksum `0x033CA203`. Post-fix
   regression on 2026-04-26 passed 50/50 ping plus 512 Etherbone CSR loops and
   `BOARD_GPIO_SMOKE_TEST_PASS`.
 - Timing: met, but the design is still not fully constrained.

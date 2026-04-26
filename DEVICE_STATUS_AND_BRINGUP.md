@@ -32,7 +32,7 @@ integration.
 | Red LEDs | Validated | Etherbone regression stresses red LED CSR write/read for 512 loops; 10 Mbps image passed 4096 loops; 2026-04-26 visual self-test captured top LED bank patterns. | Keep red LEDs as stable CSR stress target. |
 | Green LEDs | Validated, ownership caveat | Firmware heartbeat uses green LEDs; host GPIO smoke test probed `0x5a`; 2026-04-26 visual self-test captured green LED activity. | Keep ownership explicit when using green LEDs from host tests to avoid host/firmware contention. |
 | 7-segment displays | Validated, basic patterns | Etherbone GPIO smoke test wrote/read all eight display CSRs; 2026-04-26 visual self-test captured digit-pattern activity on all eight displays. | Add exhaustive walking-segment and `0`-`F` visual checklist later if segment-by-segment acceptance is needed. |
-| Switches | Working, needs manual walk | Etherbone readback returned current physical switch vector `0x00000008`; 2026-04-26 visual evidence shows switch bank. | Manually walk all 18 switches through 0/1 positions while reading CSR before marking every switch independently validated. |
+| Switches | Validated, aligned-position check | Corrected switch pin map to Terasic assignments (`SW[2]=AC27`, `SW[3]=AD27`; `AD28` is `HSMC_CLKOUT0`); Etherbone readback now returns `0x00000000` with all switches aligned, matching the visual board state. | Add a manual switch-walk script/run later if independent per-switch transition evidence is needed. |
 | Pushbuttons | Partially used | KEY0 is reset; other button GPIO use is not documented. | Add debounced GPIO readback for KEY1-KEY3; keep KEY0 as reset unless intentionally changed. |
 | LCD 16x2 character module | Validated, basic text | Host-driven HD44780 GPIO init wrote `DE2-115 SELFTEST` / `SW=00008`; 2026-04-26 agentwebcam evidence captured the text on the module. | Add firmware-native LCD summary later so the board can self-report without a host script. |
 | Board/device indicator LEDs | Working, needs regression | 2026-04-26 visual evidence includes the power/connector/device LED region; indicators are visible and useful for board state while tests run. | Map each indicator to its source/device and define expected on/blink/off semantics per test mode. |
@@ -120,8 +120,8 @@ python scripts\ethernet_low_speed_test.py --ping-count 50 --csr-loops 512 --bind
 
 1. **Switches and buttons**
    - UART and Etherbone readback with expected bit masks.
-   - Current switch vector capture is automated; full validation requires a
-     manual switch walk.
+   - Aligned-position readback is validated after the pin-map fix; full
+     independent transition validation still requires a manual switch walk.
 2. **7-segment displays**
    - Basic digit patterns are now captured; add walking-segment evidence if a
      segment-by-segment acceptance log is needed.

@@ -11,7 +11,8 @@ Workspace: `C:\Users\Mark\Projects\DE2-115`
 - **GPIO/visual self-test:** The current AUTO10/100 image includes board-test
   hooks for LEDs, switches, 7-seg, and LCD. Host GPIO smoke test passed, and
   `agentwebcam` camera `1` captured board screenshots/video during the visual
-  self-test.
+  self-test. The switch pin map has been corrected; all aligned switches now
+  read `0x00000000`.
 - **Saved image:** The 10-only validation `.sof` is tracked at `validation_images/de2_115_vga_platform_eth10_validated_20260426.sof` with SHA256 `B886FAC43010C039237CBC94BE316AEF1796E6496DE63DEAD67AFB032FB9373A`.
 - **Preservation manifest:** `ETHERNET_BASELINE.md` now records the working
   Ethernet settings, code paths, build commands, validation results, and
@@ -46,6 +47,8 @@ Workspace: `C:\Users\Mark\Projects\DE2-115`
 - Added firmware board-test hooks that print a `BOARDTEST` banner and exercise
   red LEDs, green LEDs, eight 7-segment display CSRs, LCD GPIO, and optional
   SDRAM scratch testing.
+- Corrected the DE2-115 switch pin map: `SW[2]` is `AC27`, `SW[3]` is `AD27`,
+  and `AD28` is not a switch pin (`HSMC_CLKOUT0` in Terasic references).
 - Added `scripts/board_gpio_smoke_test.py` for repeatable Etherbone GPIO smoke
   testing.
 - Added `scripts/visual_board_selftest.py` for host-driven LCD text, LED/7-seg
@@ -55,7 +58,7 @@ Workspace: `C:\Users\Mark\Projects\DE2-115`
 ## Latest Verified Board Log
 
 Key lines from the current AUTO10/100 image programmed on 2026-04-26 at
-16:52:53, checksum `0x033F25A3`:
+17:20:13, checksum `0x033CA203`:
 
 ```text
 Ping statistics for 192.168.178.50:
@@ -65,7 +68,7 @@ IDENT_PREFIX 'LiteX VGA Test SoC on DE'
 ETHERBONE_CSR_STRESS_OK loops=512 ...
 ETHERNET_LOW_SPEED_TEST_PASS
 
-SWITCHES 0x00000008
+SWITCHES 0x00000000
 LEDS_R_RW_OK
 LEDS_G_PROBE 0x0000005a
 SEVEN_SEG_RW_OK
@@ -76,8 +79,8 @@ BOARD_GPIO_SMOKE_TEST_PASS
 Visual self-test artifacts from `agentwebcam` camera `1`:
 
 ```text
-SCREENSHOT local_artifacts\screenshots\board_visual_selftest_20260426_170047.jpg
-VIDEO local_artifacts\videos\board_visual_selftest_20260426_170047.mp4
+SCREENSHOT local_artifacts\screenshots\board_visual_selftest_20260426_172358.jpg
+VIDEO local_artifacts\videos\board_visual_selftest_20260426_172358.mp4
 CROP local_artifacts\screenshots\board_visual_selftest_20260426_170047_switches_red_leds_7seg.jpg
 CROP local_artifacts\screenshots\board_visual_selftest_20260426_170047_lcd.jpg
 CROP local_artifacts\screenshots\board_visual_selftest_20260426_170047_device_leds_connectors.jpg
@@ -166,7 +169,7 @@ python scripts\visual_board_selftest.py --start-server --port 1238 --camera 1 --
 
 ## Remaining Work
 
-1. Keep `scripts/ethernet_low_speed_test.py` as the acceptance gate before/after USB changes. Current programmed image is the general-purpose AUTO10/100 board-test image, checksum `0x033F25A3`; the tracked 10-only validation image remains preserved in `validation_images/`.
+1. Keep `scripts/ethernet_low_speed_test.py` as the acceptance gate before/after USB changes. Current programmed image is the general-purpose AUTO10/100 board-test image with corrected switch pins, checksum `0x033CA203`; the tracked 10-only validation image remains preserved in `validation_images/`.
 2. Capture external USB HPI pins with SignalTap or a logic analyzer during the read cycle: `OTG_DATA[15:0]`, `OTG_ADDR[1:0]`, `OTG_CS_N`, `OTG_RD_N`, `OTG_WR_N`, `OTG_RST_N`, and `OTG_INT`.
 3. Compare the same board against a known-good Terasic USB demo bitstream to rule out board/CY7C67200 hardware state.
 4. Once USB readback works, resume LCP load verification and mailbox ACK flow.
@@ -174,6 +177,6 @@ python scripts\visual_board_selftest.py --start-server --port 1238 --camera 1 --
 6. Use `DEVICE_STATUS_AND_BRINGUP.md` as the board-wide backlog. Start SD card
    bring-up after USB is unblocked enough to avoid losing the hardware-debug
    thread.
-7. To fully validate all 18 switches, manually walk each switch and record the
-   `switches_in` CSR value; current evidence validates the physical vector
-   `0x00000008`, not every switch independently.
+7. To fully validate independent transitions for all 18 switches, manually walk
+   each switch and record the `switches_in` CSR value. Current evidence
+   validates the all-aligned vector `0x00000000` after correcting the pin map.

@@ -36,7 +36,7 @@ _extra_io = [
 
     # Switches - Bank 3, 4 (3.3V)
     ("switches", 0, Pins(
-        "AB28 AC28 AD27 AD28 AB27 AC26 AD26 AB26 AC25",
+        "AB28 AC28 AC27 AD27 AB27 AC26 AD26 AB26 AC25",
         "AB25 AC24 AB24 AB23 AA24 AA23 AA22 Y24 Y23"),
         IOStandard("3.3-V LVTTL")
     ),

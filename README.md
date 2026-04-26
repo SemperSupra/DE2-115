@@ -18,7 +18,8 @@ device.
 - Board GPIO/visual self-test is now available. Red LEDs, green LEDs, 7-seg
   display CSRs, LCD GPIO, and the current switch vector pass the host GPIO smoke
   test; `agentwebcam` camera `1` captured the LCD/top LED/7-seg/device-indicator
-  view during the visual self-test.
+  view during the visual self-test. The switch pin map has been corrected to
+  match Terasic references, and all aligned switches now read `0x00000000`.
 - USB HPI register ordering, local address decode, and unverified DACK pin
   assignment have been fixed. The FPGA now drives HPI write data correctly,
   confirmed by debug readback showing `sample=00001234 cy=00001234` during a
