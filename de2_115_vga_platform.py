@@ -20,6 +20,19 @@ _extra_io = [
     ("ping_vsync", 0, Pins("C13"), IOStandard("3.3-V LVTTL")), # Bank 8
 
     ("enet_clk", 0, Pins("A14"), IOStandard("3.3-V LVTTL")),
+    # Dedicated 1000M GTX clocks. The base LiteX DE2-115 platform exposes
+    # eth_clocks tx on ENETx_TX_CLK, which is the 10/100 clock pin. RGMII
+    # 1000M TX must drive ENETx_GTX_CLK instead.
+    ("eth_gtx_clocks", 0,
+        Subsignal("tx", Pins("A17")),
+        Subsignal("rx", Pins("A15")),
+        IOStandard("2.5 V")
+    ),
+    ("eth_gtx_clocks", 1,
+        Subsignal("tx", Pins("C23")),
+        Subsignal("rx", Pins("B15")),
+        IOStandard("2.5 V")
+    ),
 
     # Switches - Bank 3, 4 (3.3V)
     ("switches", 0, Pins(
@@ -134,17 +147,15 @@ _extra_io = [
         Subsignal("rst_n", Pins("C5"), IOStandard("3.3-V LVTTL")),
         Subsignal("int0", Pins("D5")),
         Subsignal("int1", Pins("E5")),
-        Subsignal("dack_n", Pins("C4 D4")),
-        Subsignal("dreq", Pins("B4 J1")),
+        # The DE2-115 manual's OTG HPI table only exposes DREQ[0] on J1.
+        # Do not assign board-specific DACK pins here; CY7C67200 boot straps
+        # are sampled around reset and unrelated sideband drive can disturb HPI
+        # bring-up on some board revisions.
+        Subsignal("dreq", Pins("J1")),
         IOStandard("3.3-V LVTTL")
     ),
     
     # On-board RGMII Ethernet (Marvell 88E1111)
-    ("eth_clocks", 0,
-        Subsignal("tx", Pins("B17")),
-        Subsignal("rx", Pins("A15")),
-        IOStandard("2.5 V")
-    ),
     ("rgmii_eth", 0,
         Subsignal("rst_n",   Pins("C19")),
         Subsignal("mdio",    Pins("B21")),
@@ -153,11 +164,6 @@ _extra_io = [
         Subsignal("rx_data", Pins("C16 D16 D17 C15")),
         Subsignal("tx_ctl",  Pins("A18")),
         Subsignal("tx_data", Pins("C18 D19 A19 B19")),
-        IOStandard("2.5 V")
-    ),
-    ("eth_clocks", 1,
-        Subsignal("tx", Pins("C23")),
-        Subsignal("rx", Pins("B15")),
         IOStandard("2.5 V")
     ),
     ("rgmii_eth", 1,

@@ -47,7 +47,7 @@ if %errorlevel% neq 0 (
 )
 
 echo [3.1/4] Generating SoC Software headers (Pass 1)...
-call :log_and_exec "docker compose exec -T litex_builder /bin/bash -c 'chmod +x /workspace/scripts/*.sh && /workspace/scripts/build_soc.sh'"
+call :log_and_exec "docker compose exec -T litex_builder /bin/bash -c 'chmod +x /workspace/scripts/*.sh && /workspace/scripts/build_soc.sh 1'"
 if %errorlevel% neq 0 (
     echo [ERROR] LiteX SoC generation failed.
     exit /b 1
@@ -61,7 +61,7 @@ if %errorlevel% neq 0 (
 )
 
 echo [3.3/4] Integrating firmware into ROM (Pass 2)...
-call :log_and_exec "docker compose exec -T litex_builder /bin/bash -c '/workspace/scripts/build_soc.sh'"
+call :log_and_exec "docker compose exec -T litex_builder /bin/bash -c '/workspace/scripts/build_soc.sh 1'"
 if %errorlevel% neq 0 (
     echo [ERROR] Firmware integration failed.
     exit /b 1

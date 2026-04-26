@@ -130,7 +130,7 @@ class SimpleVGA(LiteXModule):
 
 # --- Master SoC ---
 class DE2_115VGAMaster(SoCCore):
-    def __init__(self, sys_clk_freq=50e6, eth_port=0, **kwargs):
+    def __init__(self, sys_clk_freq=50e6, eth_port=1, **kwargs):
         self.platform = de2_115_vga_platform.Platform()
         eth_core_ip = os.environ.get("DE2_ETH_CORE_IP", "192.168.178.50")
         # LiteX requires ethmac_local_ip != ip_address when with_ethmac=True.
@@ -159,9 +159,9 @@ class DE2_115VGAMaster(SoCCore):
 
         # Ethernet
         self.submodules.ethphy = LiteEthPHYRGMII(
-            clock_pads = self.platform.request("eth_clocks", eth_port),
+            clock_pads = self.platform.request("eth_gtx_clocks", eth_port),
             pads       = self.platform.request("rgmii_eth", eth_port),
-            tx_clk     = self.crg.cd_eth.clk,
+            force_mii  = True,
         )
         self.add_etherbone(
             phy=self.ethphy,
@@ -170,6 +170,72 @@ class DE2_115VGAMaster(SoCCore):
             with_ethmac=True,
             ethmac_local_ip=ethmac_local_ip,
             ethmac_remote_ip=eth_remote_ip,
+        )
+        arp = self.ethcore_etherbone.arp
+        arp_dbg_source = Signal(4)
+        arp_rx_count = Signal(8)
+        arp_rx_request_count = Signal(8)
+        arp_tx_sink_count = Signal(8)
+        arp_tx_source_count = Signal(8)
+        arp_last_rx_ip = Signal(32)
+        arp_last_rx_mac = Signal(48)
+        arp_last_tx_ip = Signal(32)
+        arp_last_tx_mac = Signal(48)
+        arp_rx_fire = Signal()
+        arp_tx_sink_fire = Signal()
+        arp_tx_source_fire = Signal()
+        self.comb += [
+            arp_rx_fire.eq(arp.rx.source.valid & arp.rx.source.ready),
+            arp_tx_sink_fire.eq(arp.tx.sink.valid & arp.tx.sink.ready),
+            arp_tx_source_fire.eq(arp.tx.source.valid & arp.tx.source.ready),
+        ]
+        self.sync += [
+            If(arp_dbg_source[0],
+                arp_rx_count.eq(0),
+                arp_rx_request_count.eq(0),
+                arp_tx_sink_count.eq(0),
+                arp_tx_source_count.eq(0),
+                arp_last_rx_ip.eq(0),
+                arp_last_rx_mac.eq(0),
+                arp_last_tx_ip.eq(0),
+                arp_last_tx_mac.eq(0),
+            ).Else(
+                If(arp_rx_fire,
+                    arp_rx_count.eq(arp_rx_count + 1),
+                    If(arp.rx.source.request,
+                        arp_rx_request_count.eq(arp_rx_request_count + 1),
+                    ),
+                    arp_last_rx_ip.eq(arp.rx.source.ip_address),
+                    arp_last_rx_mac.eq(arp.rx.source.mac_address),
+                ),
+                If(arp_tx_sink_fire,
+                    arp_tx_sink_count.eq(arp_tx_sink_count + 1),
+                    arp_last_tx_ip.eq(arp.tx.sink.ip_address),
+                    arp_last_tx_mac.eq(arp.tx.sink.mac_address),
+                ),
+                If(arp_tx_source_fire,
+                    arp_tx_source_count.eq(arp_tx_source_count + 1),
+                ),
+            )
+        ]
+        self.specials += Instance("altsource_probe",
+            p_sld_auto_instance_index="YES",
+            p_sld_instance_index=3,
+            p_instance_id="ARP0",
+            p_probe_width=192,
+            p_source_width=4,
+            p_source_initial_value="0",
+            i_probe=Cat(
+                arp_rx_count,
+                arp_rx_request_count,
+                arp_tx_sink_count,
+                arp_tx_source_count,
+                arp_last_rx_ip,
+                arp_last_rx_mac,
+                arp_last_tx_ip,
+                arp_last_tx_mac,
+            ),
+            o_source=arp_dbg_source,
         )
 
         # Timer & UART
@@ -231,11 +297,9 @@ class DE2_115VGAMaster(SoCCore):
         # USB (ISP1761)
         usb_pads = self.platform.request("usb_otg")
         
-        # Drive USB strapping pins for HPI mode:
-        # DREQ should be LOW, DACK# should be HIGH at reset de-assertion.
-        self.comb += [
-            usb_pads.dack_n.eq(0b11),
-        ]
+        # Leave extra CY7C67200 sideband pins undriven. The DE2-115 manual's
+        # HPI table only exposes data/address/control/reset/INT; driving
+        # board-specific DACK pins here risks disturbing boot straps.
 
         self.platform.add_source("CY7C67200_IF.v")
         self.platform.add_source("cy7c67200_wb_bridge.v")
@@ -296,7 +360,7 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="LiteX SoC on DE2-115")
     parser.add_argument("--with-firmware", help="Path to firmware binary to integrate into ROM")
-    parser.add_argument("--eth-port", default=0, type=int, help="Ethernet port (0 or 1)")
+    parser.add_argument("--eth-port", default=1, type=int, help="Ethernet port (0 or 1)")
     args = parser.parse_args()
 
     soc_kwargs = soc_core_argdict(args)

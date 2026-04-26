@@ -16,8 +16,11 @@ module cy7c67200_wb_bridge (
     output wire        hpi_wr_n,
     output wire        hpi_cs_n,
     output wire        hpi_rst_n,
+    input  wire        hpi_int0,
+    input  wire        hpi_int1,
+    input  wire        hpi_dreq,
     input  wire [1:0]  diag_in,
-    output wire [159:0] dbg_probe
+    output wire [191:0] dbg_probe
 );
 
     localparam STATE_IDLE       = 2'd0;
@@ -44,18 +47,21 @@ module cy7c67200_wb_bridge (
     reg [15:0] last_sample_data = 16'd0;
     reg [15:0] last_cy_data = 16'd0;
     
-    reg        cfg_force_rst_en = 1'b0;
-    reg        cfg_hpi_rst_n = 1'b1;
+    reg        cfg_force_rst_en = 1'b1;
+    reg        cfg_hpi_rst_n = 1'b0;
     reg [5:0]  cfg_access_cycles = ACCESS_CYCLES_DEFAULT;
     reg [5:0]  cfg_sample_offset = SAMPLE_OFFSET_DEFAULT;
     reg [5:0]  cfg_turnaround_cycles = TURNAROUND_CYCLES_DEFAULT;
 
     wire       wb_access = wb_cyc & wb_stb;
-    // Map HPI registers to contiguous words (offsets 0, 1, 2, 3)
-    // Map debug registers to anything above word address 0x3F
-    wire       debug_access = wb_access & (wb_adr[29:6] != 24'd0);
-    wire [1:0] bus_hpi_addr = wb_adr[1:0];
-    wire [1:0] debug_index = wb_adr[1:0];
+    // LiteX passes the absolute Wishbone word address. Decode only the local
+    // low bits inside the 64 KiB USB window.
+    wire [13:0] local_adr = wb_adr[13:0];
+    // Map HPI registers to contiguous words (offsets 0, 1, 2, 3).
+    // Map debug registers to anything above local word address 0x3F.
+    wire       debug_access = wb_access & (local_adr[13:6] != 8'd0);
+    wire [1:0] bus_hpi_addr = local_adr[1:0];
+    wire [1:0] debug_index = local_adr[1:0];
     wire       hpi_access = active & ~debug_latched;
     wire [5:0] effective_access_cycles =
         (cfg_access_cycles == 6'd0) ? 6'd1 : cfg_access_cycles;
@@ -67,13 +73,7 @@ module cy7c67200_wb_bridge (
     wire       cy_i_rst_n = cfg_force_rst_en ? cfg_hpi_rst_n : ~rst;
     wire [31:0] cy_o_data;
     wire        cy_o_int;
-    wire [0:0] diag_source;
-
-    assign hpi_cs_n  = ~hpi_access;
-    assign hpi_rd_n  = (hpi_access & ~latched_we) ? 1'b0 : 1'b1;
-    assign hpi_wr_n  = (hpi_access &  latched_we) ? 1'b0 : 1'b1;
-    assign hpi_addr  = latched_adr[1:0];
-    assign hpi_rst_n = cy_i_rst_n;
+    wire [3:0] diag_source;
 
     CY7C67200_IF cy_if (
         .iDATA({16'h0000, write_data}),
@@ -86,26 +86,43 @@ module cy7c67200_wb_bridge (
         .iCLK(clk),
         .oINT(cy_o_int),
         .HPI_DATA(hpi_data),
-        .HPI_ADDR(),
-        .HPI_RD_N(),
-        .HPI_WR_N(),
-        .HPI_CS_N(),
-        .HPI_RST_N(),
-        .HPI_INT(1'b0)
+        .HPI_ADDR(hpi_addr),
+        .HPI_RD_N(hpi_rd_n),
+        .HPI_WR_N(hpi_wr_n),
+        .HPI_CS_N(hpi_cs_n),
+        .HPI_RST_N(hpi_rst_n),
+        .HPI_INT(hpi_int0)
     );
 
-    reg [159:0] diag_probe_reg = 160'd0;
+    wire [2:0] diag_capture_mode = diag_source[3:1];
+    wire [5:0] diag_capture_count =
+        latched_we ? 6'd10 : sample_threshold;
+    wire       diag_capture_match =
+        (diag_capture_mode == 3'd0) |
+        ((diag_capture_mode == 3'd1) & ~latched_we & (hpi_addr == 2'd0)) |
+        ((diag_capture_mode == 3'd2) &  latched_we & (hpi_addr == 2'd0)) |
+        ((diag_capture_mode == 3'd3) & ~latched_we & (hpi_addr == 2'd3)) |
+        ((diag_capture_mode == 3'd4) &  latched_we & (hpi_addr == 2'd2)) |
+        ((diag_capture_mode == 3'd5) & ~latched_we & (hpi_addr == 2'd1)) |
+        ((diag_capture_mode == 3'd6) &  latched_we & (hpi_addr == 2'd1)) |
+        ((diag_capture_mode == 3'd7) &  latched_we & (hpi_addr == 2'd3));
+
+    reg [191:0] diag_probe_reg = 192'd0;
     reg         diag_captured = 1'b0;
 
+    wire [191:0] diag_probe_live = {
+        1'b0, cy_o_int, cfg_turnaround_cycles, cfg_access_cycles, cfg_sample_offset,
+        effective_access_cycles, sample_threshold,
+        diag_captured, diag_capture_match, diag_source, diag_in, hpi_int0, hpi_int1, hpi_dreq,
+        hpi_access, rst, hpi_rst_n, wb_access, debug_access, active, debug_latched, latched_we, wb_we,
+        hpi_cs_n, hpi_rd_n, hpi_wr_n, hpi_addr, state, count, wb_ack,
+        local_adr, write_data, read_data, sample_data, last_sample_data,
+        cy_o_data[15:0], hpi_data, wb_dat_w[15:0]
+    };
+
     always @(posedge clk) begin
-        if (active && count == 6'd10 && !diag_captured) begin
-            diag_probe_reg <= {
-                6'd0, diag_in, hpi_access, rst, hpi_rst_n, wb_access, debug_access, active, debug_latched, latched_we, wb_we,
-                state, count, hpi_cs_n, hpi_rd_n, hpi_wr_n, hpi_addr,
-                1'b0, 1'b0, 1'b0, 2'b0,
-                wb_ack, 3'b000, latched_adr[9:0], write_data, read_data,
-                sample_data, last_sample_data, cy_o_data[15:0], hpi_data, wb_dat_w[15:0]
-            };
+        if (active && !diag_captured && diag_capture_match && count == diag_capture_count) begin
+            diag_probe_reg <= diag_probe_live | (192'd1 << 159);
             diag_captured <= 1'b1;
         end
         if (diag_source[0]) begin
@@ -113,20 +130,14 @@ module cy7c67200_wb_bridge (
         end
     end
 
-    wire [159:0] diag_probe_mux = diag_captured ? diag_probe_reg : {
-        6'd0, diag_in, hpi_access, rst, hpi_rst_n, wb_access, debug_access, active, debug_latched, latched_we, wb_we,
-        state, count, hpi_cs_n, hpi_rd_n, hpi_wr_n, hpi_addr,
-        1'b0, 1'b0, 1'b0, 2'b0,
-        wb_ack, 3'b000, latched_adr[9:0], write_data, read_data,
-        sample_data, last_sample_data, cy_o_data[15:0], hpi_data, wb_dat_w[15:0]
-    };
+    wire [191:0] diag_probe_mux = diag_captured ? diag_probe_reg : diag_probe_live;
 
     altsource_probe #(
         .sld_auto_instance_index("YES"),
         .sld_instance_index(0),
         .instance_id("HPI0"),
-        .probe_width(160),
-        .source_width(1),
+        .probe_width(192),
+        .source_width(4),
         .source_initial_value("0")
     ) hpi_probe (
         .probe(diag_probe_mux),
@@ -170,8 +181,8 @@ module cy7c67200_wb_bridge (
             latched_we    <= 1'b0;
             active        <= 1'b0;
             debug_latched <= 1'b0;
-            cfg_force_rst_en <= 1'b0;
-            cfg_hpi_rst_n <= 1'b1;
+            cfg_force_rst_en <= 1'b1;
+            cfg_hpi_rst_n <= 1'b0;
             cfg_access_cycles <= ACCESS_CYCLES_DEFAULT;
             cfg_sample_offset <= SAMPLE_OFFSET_DEFAULT;
             cfg_turnaround_cycles <= TURNAROUND_CYCLES_DEFAULT;
@@ -196,7 +207,7 @@ module cy7c67200_wb_bridge (
                         endcase
                     end
                 end else if (wb_access) begin
-                    latched_adr   <= wb_adr;
+                    latched_adr   <= {28'd0, bus_hpi_addr};
                     write_data    <= wb_dat_w[15:0];
                     latched_we    <= wb_we;
                     debug_latched <= 1'b0;

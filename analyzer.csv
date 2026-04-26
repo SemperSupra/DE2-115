@@ -1,4 +1,4 @@
-config,None,data_width,270
+config,None,data_width,301
 config,None,depth,2048
 config,None,samplerate,1000000000000
 signal,0,crg_locked,1
@@ -17,5 +17,5 @@ signal,0,usb_otg_cs_n,1
 signal,0,usb_otg_rst_n,1
 signal,0,usb_otg_int0,1
 signal,0,usb_otg_int1,1
-signal,0,usb_otg_dreq,2
-signal,0,dbg_probe,160
+signal,0,usb_otg_dreq,1
+signal,0,dbg_probe,192

@@ -35,10 +35,10 @@ demo.elf: \$(OBJECTS)
 	chmod -x \$@
 
 %.o: %.c
-	\$(CC) \$(CFLAGS) -c \$< -o \$@
+	\$(CC) \$(CFLAGS) \$(FIRMWARE_CFLAGS) -c \$< -o \$@
 
 %.o: %.S
-	\$(CC) \$(CFLAGS) -c \$< -o \$@
+	\$(CC) \$(CFLAGS) \$(FIRMWARE_CFLAGS) -c \$< -o \$@
 
 clean:
 	rm -f *.o *.elf *.bin .*~

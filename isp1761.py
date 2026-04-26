@@ -14,7 +14,7 @@ class ISP1761Bridge(Module):
     def __init__(self, pads, diag_in=0):
         self.bus = bus = wishbone.Interface()
         self.force_hpi_boot = Signal()
-        self.dbg_probe = Signal(160)
+        self.dbg_probe = Signal(192)
 
         self.specials += Instance("cy7c67200_wb_bridge",
             i_clk=ClockSignal(),
@@ -32,6 +32,9 @@ class ISP1761Bridge(Module):
             o_hpi_wr_n=pads.wr_n,
             o_hpi_cs_n=pads.cs_n,
             o_hpi_rst_n=pads.rst_n,
+            i_hpi_int0=pads.int0,
+            i_hpi_int1=pads.int1,
+            i_hpi_dreq=pads.dreq,
             i_diag_in=diag_in,
             o_dbg_probe=self.dbg_probe,
         )

@@ -17,7 +17,9 @@ cp "$HPI_BRIDGE_SRC" "$HPI_BRIDGE_STAGED"
 cp "$CY_IF_SRC" "$CY_IF_STAGED"
 cp "$VGA_TEXT_SRC" "$VGA_TEXT_STAGED"
 
-ETH_PORT=${1:-0}
+ETH_PORT=${1:-1}
+SIGNALTAP_FILE=${2:-}
+SIGNALTAP_FILE_BASENAME=
 
 echo "--- Stage 1: Generating Software Headers (Port $ETH_PORT) ---"
 python3 $TARGET_PATH --eth-port $ETH_PORT
@@ -39,6 +41,13 @@ sed -i \
     -e 's|/workspace/build/terasic_de2_115/gateware/de2_115_vga_platform.v|de2_115_vga_platform.v|g' \
     -e 's|/pythondata-cpu-vexriscv/pythondata_cpu_vexriscv/verilog/VexRiscv.v|VexRiscv.v|g' \
     "$GATEWARE_DIR/de2_115_vga_platform.qsf"
+
+sed -i '/^set_global_assignment -name SIGNALTAP_FILE /d' "$GATEWARE_DIR/de2_115_vga_platform.qsf"
+if [ -n "$SIGNALTAP_FILE" ]; then
+    SIGNALTAP_FILE_BASENAME=$(basename "$SIGNALTAP_FILE")
+    cp "$SIGNALTAP_FILE" "$GATEWARE_DIR/$SIGNALTAP_FILE_BASENAME"
+    printf '\nset_global_assignment -name SIGNALTAP_FILE %s\n' "$SIGNALTAP_FILE_BASENAME" >> "$GATEWARE_DIR/de2_115_vga_platform.qsf"
+fi
 
 echo "--- Copying VexRiscv CPU Verilog ---"
 VEXRISCV_VERILOG=$(find /pythondata-cpu-vexriscv -name VexRiscv.v | head -n 1)
