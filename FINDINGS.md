@@ -103,12 +103,30 @@ HPI_HOST_MEM_RW_FAIL
   or OUT packets. The project image produced 50 such events over roughly 73
   seconds; Terasic's `DE2_115_NIOS_HOST_MOUSE_VGA.sof` produced the same
   no-packet pattern on the same board/path.
-- Because the Terasic host demo behaves the same way with KVM2USB inline, the
-  next isolation step is to replace the downstream KVM2USB with a simple
-  known-good low/full-speed USB mouse or keyboard and capture that with the
-  Beagle. A working mouse capture would make KVM2USB compatibility the likely
-  issue; another no-packet capture would point at host-port hardware/cabling or
-  power.
+- KVM2USB itself is not dead: when plugged into a PC USB hub, Windows enumerates
+  `KVM2USB 3.0`, `KVM2USB 3.0 Config`, a `VID_2B77&PID_3661` composite device,
+  and multiple HID/vendor-defined interfaces, all with status `OK`.
+- A Beagle reference capture with the PC hub as host, Beagle inline, and KVM2USB
+  as target shows real USB traffic: `SETUP`, descriptor `DATA`, `ACK`, and
+  collapsed `IN/NAK` polling. The same trace also shows repeated
+  `TGT_DISCON; RESET` / `TGT_CONNECT/UNRST` cycles, so the KVM2USB/hub/Beagle
+  path is functional but not fully stable in that inline configuration.
+- Terasic's `DE2_115_USB_DEVICE_LED.sof` device-mode demo was programmed to
+  isolate the DE2 Type-B device path from the LiteX bridge/firmware. On one hub
+  Windows briefly reported `Unknown USB Device (Device Descriptor Request
+  Failed)` as `USB\VID_0000&PID_0002`; after moving hubs and putting the Beagle
+  inline, the present-device list no longer showed a DE2/unknown entry.
+- Clean device-only Beagle captures with `PC hub -> Beagle USB 12 -> DE2 DEVICE
+  Type-B`, with KVM2USB unplugged from the DE2 HOST port, show
+  `TGT_CONNECT/UNRST` followed by continuous `BAD_SYNC` events about every
+  21 us and no valid reset, setup, data, ACK, or descriptor packets. Reprogramming
+  the Terasic USB device demo did not change this pattern.
+- Because the Terasic host demo still produces no packets on the DE2 HOST path
+  while the PC hub path does, the next isolation step is a simple known-good
+  low/full-speed USB mouse or keyboard through the Beagle into the DE2 HOST
+  port. Another no-packet capture would point at DE2 host-port hardware,
+  CY7C67200 reset/clock/power, or HPI/firmware initialization rather than a dead
+  KVM2USB.
 - Attempting to embed `signaltap/usb_hpi_capture.stp` through the QSF
   `SIGNALTAP_FILE` assignment still produced a SOF where `quartus_stp` reports
   `Can't find the instance`. Reports show SLD hub/fabric only, not a usable

@@ -158,11 +158,9 @@ Interpretation:
 - USB reads are not returning CY7C67200-driven data; the sampled bus remains zero.
 - Ethernet has moved past pinout/link detection and is usable for ping and Etherbone CSR transactions in AUTO10/100, 100-only, and 10-only low-speed modes.
 - Beagle USB 12 inline capture on the DE2-115 USB HOST path sees target
-  connect/disconnect/reset events but no USB packets. The Beagle 12 remains
-  inline between the KVM2USB and the DE2-115 HOST Type-A port. Passive captures
-  with both this image and the Terasic USB host demo produced no packet output
-  without a fresh physical reconnect event, so the next Beagle test should run
-  while the KVM2USB/downstream side is unplugged/replugged.
+  connect/disconnect/reset events but no USB packets. Passive captures with both
+  this image and the Terasic USB host demo produced no SOF/SETUP/IN/OUT traffic
+  on the DE2 host path.
 - Active Beagle capture on 2026-04-27 with the KVM2USB inline produced 50
   events over roughly 73 seconds on the project image: repeated
   `TGT_CONNECT/UNRST` followed by `TGT_DISCON; RESET`, with no SOF/SETUP/IN/OUT
@@ -170,6 +168,21 @@ Interpretation:
   `DE2_115_NIOS_HOST_MOUSE_VGA.sof` produced the same no-packet pattern. This
   makes the immediate question physical/device-path compatibility, not just our
   HPI firmware.
+- KVM2USB direct-to-PC validation through a USB hub succeeded at the Windows
+  device level: `KVM2USB 3.0`, `KVM2USB 3.0 Config`, `VID_2B77&PID_3661`
+  composite, and related HID/vendor-defined interfaces all report `OK`. A
+  Beagle reference trace in the PC-hub path shows `SETUP`, descriptor `DATA`,
+  `ACK`, and `IN/NAK` polling, proving the analyzer and KVM2USB can produce
+  packet-level traffic. That inline reference still resets repeatedly, so do not
+  treat it as a stable long-run KVM2USB trace.
+- Device-mode isolation with Terasic's `DE2_115_USB_DEVICE_LED.sof` now points
+  at a lower-level DE2/CY/physical USB issue, not just LiteX firmware. With the
+  DE2 DEVICE Type-B path connected through the Beagle to a PC hub and KVM2USB
+  unplugged from the DE2 HOST port, Beagle sees `TGT_CONNECT/UNRST` followed by
+  continuous `BAD_SYNC` events and no valid USB packets. Reprogramming the
+  Terasic device demo did not change the trace. Windows previously showed
+  `Unknown USB Device (Device Descriptor Request Failed)` on one hub, but after
+  the clean Beagle capture no DE2/unknown device is present.
 
 ## Verified Build Commands
 
@@ -228,12 +241,18 @@ python scripts\visual_board_selftest.py --start-server --port 1238 --camera 1 --
    mouse or keyboard connected through the Beagle to the DE2-115 HOST port.
    Terasic's host mouse demo is the preferred comparison image for that test.
    If that also shows only connect/disconnect/reset and no packets, debug the
-   host-port hardware/cabling/power path before more HPI firmware work.
-5. Once USB readback works, resume LCP load verification and mailbox ACK flow.
-6. Keep gigabit Ethernet deferred in the backlog; later add a separate gigabit cleanup task using `ETH0`/`ETX0` captures.
-7. Use `DEVICE_STATUS_AND_BRINGUP.md` as the board-wide backlog. Start SD card
+   DE2 host-port hardware/cabling/power/CY reset-clock path before more HID
+   class work.
+5. Before more LiteX USB firmware work, resolve the device-path `BAD_SYNC`
+   symptom with Terasic's device demo: verify Beagle cable orientation, try a
+   short known-good USB 2.0 Type-B cable, try direct PC port versus hub, and
+   inspect the DE2 USB power/PHY/connector path. A working Terasic device demo
+   is the fastest proof that the CY7C67200 physical path is sane.
+6. Once USB readback works, resume LCP load verification and mailbox ACK flow.
+7. Keep gigabit Ethernet deferred in the backlog; later add a separate gigabit cleanup task using `ETH0`/`ETX0` captures.
+8. Use `DEVICE_STATUS_AND_BRINGUP.md` as the board-wide backlog. Start SD card
    bring-up after USB is unblocked enough to avoid losing the hardware-debug
    thread.
-8. To fully validate independent transitions for all 18 switches, manually walk
+9. To fully validate independent transitions for all 18 switches, manually walk
    each switch and record the `switches_in` CSR value. Current evidence
    validates the all-aligned vector `0x00000000` after correcting the pin map.

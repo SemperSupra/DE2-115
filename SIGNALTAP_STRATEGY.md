@@ -25,9 +25,16 @@ Current evidence:
 HPI DBG WR ... sample=00001234 cy=00001234
 HPI DBG RD ... sample=00000000 cy=00000000
 HPI0 read_data: rst=0 hpi_rst_n=1 cs_n=0 rd_n=0 wr_n=1 addr=0 data=0000
-Beagle USB 12: inline between KVM2USB and DE2-115 HOST port; active captures on
-the project image and Terasic host mouse demo show repeated
-connect/disconnect/reset, but no SOF/SETUP/IN/OUT packets
+Beagle USB 12: on the DE2 HOST path with KVM2USB inline, active captures on the
+project image and Terasic host mouse demo show repeated connect/disconnect/reset,
+but no SOF/SETUP/IN/OUT packets. On the PC hub reference path, KVM2USB
+enumerates in Windows as `VID_2B77&PID_3661` and Beagle sees SETUP,
+descriptor DATA, ACK, and IN/NAK polling, although that inline reference still
+resets repeatedly.
+Terasic device-mode demo: `PC hub -> Beagle -> DE2 DEVICE Type-B` shows
+`TGT_CONNECT/UNRST` followed by continuous `BAD_SYNC` and no valid packets, even
+with KVM2USB removed from the DE2 HOST port and after reprogramming the Terasic
+device demo.
 ```
 
 Interpretation:
@@ -36,9 +43,13 @@ Interpretation:
 - FPGA HPI read cycle is being issued.
 - The CY7C67200 is not returning nonzero data at the FPGA pad sample point. An Etherbone reset/sample sweep from 0 to 60 cycles also returned only zeroes, so a simple sample-offset change is unlikely to fix it.
 - USB-line capture sees target presence/reset transitions but no host packets, so the CY is not reaching a functional USB-host state.
-- The KVM2USB inline path does not currently reach packet traffic even with the
-  Terasic host mouse demo. Before more HPI firmware changes, repeat the Beagle
-  test with a simple known-good low/full-speed mouse or keyboard.
+- The DE2 HOST path does not currently reach packet traffic even with the
+  Terasic host mouse demo. Before more HID class work, repeat the Beagle test
+  with a simple known-good low/full-speed mouse or keyboard and focus on CY
+  reset/clock/power plus HPI readback if no packets appear.
+- The DE2 DEVICE path also fails before descriptors with Terasic's demo. This
+  shifts priority to cable/orientation/hub/connector/PHY/power validation before
+  adding more SignalTap around higher-level USB firmware.
 
 SignalTap should capture external pads, not only internal bridge state.
 

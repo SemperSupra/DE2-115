@@ -145,8 +145,8 @@ _extra_io = [
         Subsignal("rd_n", Pins("B3")),
         Subsignal("wr_n", Pins("A4")),
         Subsignal("rst_n", Pins("C5"), IOStandard("3.3-V LVTTL")),
-        Subsignal("int0", Pins("D5")),
-        Subsignal("int1", Pins("E5")),
+        Subsignal("int0", Pins("A6")),
+        Subsignal("int1", Pins("D5")),
         # The DE2-115 manual's OTG HPI table only exposes DREQ[0] on J1.
         # Do not assign board-specific DACK pins here; CY7C67200 boot straps
         # are sampled around reset and unrelated sideband drive can disturb HPI

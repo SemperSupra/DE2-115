@@ -91,7 +91,7 @@ module cy7c67200_wb_bridge (
         .HPI_WR_N(hpi_wr_n),
         .HPI_CS_N(hpi_cs_n),
         .HPI_RST_N(hpi_rst_n),
-        .HPI_INT(hpi_int0)
+        .HPI_INT(hpi_int1)
     );
 
     wire [2:0] diag_capture_mode = diag_source[3:1];
