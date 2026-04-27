@@ -98,6 +98,17 @@ HPI_HOST_MEM_RW_FAIL
   Passive captures with no physical reconnect produced no output with both the
   project image and the Terasic USB host demo; the next useful Beagle run needs
   a deliberate downstream unplug/replug while capture is active.
+- Active Beagle captures on 2026-04-27 with the KVM2USB inline showed repeated
+  target connect/unreset followed by disconnect/reset, but no SOF, SETUP, IN,
+  or OUT packets. The project image produced 50 such events over roughly 73
+  seconds; Terasic's `DE2_115_NIOS_HOST_MOUSE_VGA.sof` produced the same
+  no-packet pattern on the same board/path.
+- Because the Terasic host demo behaves the same way with KVM2USB inline, the
+  next isolation step is to replace the downstream KVM2USB with a simple
+  known-good low/full-speed USB mouse or keyboard and capture that with the
+  Beagle. A working mouse capture would make KVM2USB compatibility the likely
+  issue; another no-packet capture would point at host-port hardware/cabling or
+  power.
 - Attempting to embed `signaltap/usb_hpi_capture.stp` through the QSF
   `SIGNALTAP_FILE` assignment still produced a SOF where `quartus_stp` reports
   `Can't find the instance`. Reports show SLD hub/fabric only, not a usable
@@ -159,8 +170,10 @@ HPI_HOST_MEM_RW_FAIL
   checksum `0x033D6EDD`, SHA256
   `B886FAC43010C039237CBC94BE316AEF1796E6496DE63DEAD67AFB032FB9373A`.
 - Current board image is the corrected 10-only validation image, checksum
-  `0x033C9E9A`, programmed on 2026-04-27. It passed 50/50 ping, 512 Etherbone
-  CSR loops, and board GPIO smoke test with `SWITCHES 0x00000000`.
+  `0x033C9E9A`, restored after the Terasic demo comparison on 2026-04-27. It
+  passed the full 50/50 ping plus 512 Etherbone CSR validation before the demo
+  comparison, then passed a restore smoke test with 10/10 ping, 64 CSR loops,
+  and `SWITCHES 0x00000000`.
 - Current validation image is tracked at
   `validation_images/de2_115_vga_platform_eth10_switchfix_validated_20260427.sof`
   with SHA256

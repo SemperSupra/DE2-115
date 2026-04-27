@@ -25,8 +25,9 @@ Current evidence:
 HPI DBG WR ... sample=00001234 cy=00001234
 HPI DBG RD ... sample=00000000 cy=00000000
 HPI0 read_data: rst=0 hpi_rst_n=1 cs_n=0 rd_n=0 wr_n=1 addr=0 data=0000
-Beagle USB 12: inline between KVM2USB and DE2-115 HOST port; passive captures
-without reconnect show no packets
+Beagle USB 12: inline between KVM2USB and DE2-115 HOST port; active captures on
+the project image and Terasic host mouse demo show repeated
+connect/disconnect/reset, but no SOF/SETUP/IN/OUT packets
 ```
 
 Interpretation:
@@ -35,8 +36,9 @@ Interpretation:
 - FPGA HPI read cycle is being issued.
 - The CY7C67200 is not returning nonzero data at the FPGA pad sample point. An Etherbone reset/sample sweep from 0 to 60 cycles also returned only zeroes, so a simple sample-offset change is unlikely to fix it.
 - USB-line capture sees target presence/reset transitions but no host packets, so the CY is not reaching a functional USB-host state.
-- Passive Beagle captures can miss the useful attach window; run capture while
-  unplugging/replugging the downstream KVM2USB side through the Beagle.
+- The KVM2USB inline path does not currently reach packet traffic even with the
+  Terasic host mouse demo. Before more HPI firmware changes, repeat the Beagle
+  test with a simple known-good low/full-speed mouse or keyboard.
 
 SignalTap should capture external pads, not only internal bridge state.
 

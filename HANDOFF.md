@@ -163,6 +163,13 @@ Interpretation:
   with both this image and the Terasic USB host demo produced no packet output
   without a fresh physical reconnect event, so the next Beagle test should run
   while the KVM2USB/downstream side is unplugged/replugged.
+- Active Beagle capture on 2026-04-27 with the KVM2USB inline produced 50
+  events over roughly 73 seconds on the project image: repeated
+  `TGT_CONNECT/UNRST` followed by `TGT_DISCON; RESET`, with no SOF/SETUP/IN/OUT
+  packets. Repeating the same capture after programming Terasic's
+  `DE2_115_NIOS_HOST_MOUSE_VGA.sof` produced the same no-packet pattern. This
+  makes the immediate question physical/device-path compatibility, not just our
+  HPI firmware.
 
 ## Verified Build Commands
 
@@ -217,7 +224,11 @@ python scripts\visual_board_selftest.py --start-server --port 1238 --camera 1 --
 1. Keep `scripts/ethernet_low_speed_test.py` as the acceptance gate before/after USB changes. Current programmed image is the tracked corrected 10-only validation image, checksum `0x033C9E9A`, and includes the switch pin-map fix.
 2. Do not trust USB debug builds until they pass the Ethernet low-speed gate. A deterministic HPI0-trigger RTL experiment changed placement enough to break Ethernet RX despite timing meeting, so preserve the validated image before further compile experiments.
 3. Capture external USB HPI pins with a working SignalTap instance or an external logic analyzer during the read cycle: `OTG_DATA[15:0]`, `OTG_ADDR[1:0]`, `OTG_CS_N`, `OTG_RD_N`, `OTG_WR_N`, `OTG_RST_N`, and `OTG_INT`. The current `.stp` file is not embedding a usable capture instance.
-4. Run the next Beagle capture while physically reconnecting the KVM2USB/downstream side through the Beagle 12 inline analyzer.
+4. Run the next Beagle capture with a simple known-good low/full-speed USB
+   mouse or keyboard connected through the Beagle to the DE2-115 HOST port.
+   Terasic's host mouse demo is the preferred comparison image for that test.
+   If that also shows only connect/disconnect/reset and no packets, debug the
+   host-port hardware/cabling/power path before more HPI firmware work.
 5. Once USB readback works, resume LCP load verification and mailbox ACK flow.
 6. Keep gigabit Ethernet deferred in the backlog; later add a separate gigabit cleanup task using `ETH0`/`ETX0` captures.
 7. Use `DEVICE_STATUS_AND_BRINGUP.md` as the board-wide backlog. Start SD card
