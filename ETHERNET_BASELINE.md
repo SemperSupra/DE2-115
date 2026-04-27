@@ -1,6 +1,6 @@
 # Ethernet Baseline
 
-Date: 2026-04-26
+Date: 2026-04-27
 
 This file is the preservation manifest for the currently working DE2-115
 Ethernet configuration. Treat it as the source of truth before changing
@@ -105,15 +105,19 @@ python scripts\ethernet_low_speed_test.py --ping-count 200 --csr-loops 4096 --bi
 - 100-only: Quartus compile passed, programmed checksum `0x033D701B`, 50/50 ping, 512 CSR loops passed.
 - 10-only: Quartus compile passed, programmed checksum `0x033D6EDD`, 50/50 ping, 512 CSR loops passed.
 - 10-only extended run: 200/200 ping, LiteX identifier read, 4096 red-LED CSR write/read loops passed.
+- 10-only with corrected switch pin map: Quartus compile passed, programmed
+  checksum `0x033C9E9A`, 50/50 ping, 512 CSR loops passed, and board GPIO
+  smoke test passed with `SWITCHES 0x00000000`.
 - Recurring Quartus caveat: timing is met, but clock uncertainty/unconstrained warnings remain.
 
 ## Saved Validation Image
 
-- File: `validation_images/de2_115_vga_platform_eth10_validated_20260426.sof`
-- Purpose: Port 1 forced-MII 10 Mbps validation image.
-- Programmed Quartus checksum: `0x033D6EDD`.
-- SHA256: `B886FAC43010C039237CBC94BE316AEF1796E6496DE63DEAD67AFB032FB9373A`
-- Size: `3,554,300` bytes.
+- Current file: `validation_images/de2_115_vga_platform_eth10_switchfix_validated_20260427.sof`
+- Purpose: Port 1 forced-MII 10 Mbps validation image with corrected switch pin map.
+- Programmed Quartus checksum: `0x033C9E9A`.
+- SHA256: `653CBED08D4C91ABF81BCFD7B708D980828A67BBF8C49A840DA07FA2007DBE67`
+- Size: `3,554,301` bytes.
+- Previous file: `validation_images/de2_115_vga_platform_eth10_validated_20260426.sof`, checksum `0x033D6EDD`, SHA256 `B886FAC43010C039237CBC94BE316AEF1796E6496DE63DEAD67AFB032FB9373A`.
 
 ## Debug Hooks Preserved
 

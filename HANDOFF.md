@@ -1,6 +1,6 @@
 # DE2-115 Handoff - Status Update
 
-Date: 2026-04-26
+Date: 2026-04-27
 Workspace: `C:\Users\Mark\Projects\DE2-115`
 
 ## Executive Status
@@ -13,19 +13,19 @@ Workspace: `C:\Users\Mark\Projects\DE2-115`
   `agentwebcam` camera `1` captured board screenshots/video during the visual
   self-test. The switch pin map has been corrected; all aligned switches now
   read `0x00000000`.
-- **Saved image:** The 10-only validation `.sof` is tracked at `validation_images/de2_115_vga_platform_eth10_validated_20260426.sof` with SHA256 `B886FAC43010C039237CBC94BE316AEF1796E6496DE63DEAD67AFB032FB9373A`.
+- **Saved image:** The current 10-only validation `.sof` is tracked at
+  `validation_images/de2_115_vga_platform_eth10_switchfix_validated_20260427.sof`
+  with SHA256
+  `653CBED08D4C91ABF81BCFD7B708D980828A67BBF8C49A840DA07FA2007DBE67`.
 - **Preservation manifest:** `ETHERNET_BASELINE.md` now records the working
   Ethernet settings, code paths, build commands, validation results, and
   regression rule in one place.
 - **Board-wide device plan:** `DEVICE_STATUS_AND_BRINGUP.md` records the
   status of each DE2-115 device and the staged strategy for remaining bring-up.
 - **USB HPI:** The FPGA-side HPI bridge now decodes the USB window correctly, uses Terasic-style registered HPI control/data timing, and successfully drives write data onto the bus. The CY7C67200 still returns `0x0000` on all read attempts, including basic control registers and memory readback, so LCP/BIOS ACK still fails. Etherbone-driven reset and HPI sample-offset sweeps also returned only zeroes.
-- **Current programmed board image:** Restored to the tracked 10-only Ethernet
-  validation image after a USB-debug placement experiment broke Ethernet
-  receive. Checksum `0x033D6EDD`; 20-ping smoke had 18/20 replies and
-  Etherbone CSR stress passed 256 loops. This validation image predates the
-  switch pin-map fix, so `SWITCHES` reads `0x00000008` with all switches
-  aligned.
+- **Current programmed board image:** Corrected 10 Mbps Ethernet validation
+  image, checksum `0x033C9E9A`. It passed 50/50 ping, 512 Etherbone CSR loops,
+  and board GPIO smoke test with `SWITCHES 0x00000000`.
 
 ## Changes Since Previous Handoff
 
@@ -70,8 +70,27 @@ Workspace: `C:\Users\Mark\Projects\DE2-115`
 
 ## Latest Verified Board Log
 
-Key lines from the current AUTO10/100 image programmed on 2026-04-26 at
+Key lines from the earlier AUTO10/100 board-test image programmed on 2026-04-26 at
 17:20:13, checksum `0x033CA203`:
+
+```text
+Ping statistics for 192.168.178.50:
+    Packets: Sent = 50, Received = 50, Lost = 0 (0% loss)
+
+IDENT_PREFIX 'LiteX VGA Test SoC on DE'
+ETHERBONE_CSR_STRESS_OK loops=512 ...
+ETHERNET_LOW_SPEED_TEST_PASS
+
+SWITCHES 0x00000000
+LEDS_R_RW_OK
+LEDS_G_PROBE 0x0000005a
+SEVEN_SEG_RW_OK
+LCD_GPIO_RW_OK
+BOARD_GPIO_SMOKE_TEST_PASS
+```
+
+Current programmed corrected 10 Mbps image, programmed on 2026-04-27 at
+06:33:00, checksum `0x033C9E9A`:
 
 ```text
 Ping statistics for 192.168.178.50:
@@ -195,7 +214,7 @@ python scripts\visual_board_selftest.py --start-server --port 1238 --camera 1 --
 
 ## Remaining Work
 
-1. Keep `scripts/ethernet_low_speed_test.py` as the acceptance gate before/after USB changes. Current programmed image is the tracked 10-only validation image, checksum `0x033D6EDD`; it restores Ethernet but does not include the switch pin-map fix.
+1. Keep `scripts/ethernet_low_speed_test.py` as the acceptance gate before/after USB changes. Current programmed image is the tracked corrected 10-only validation image, checksum `0x033C9E9A`, and includes the switch pin-map fix.
 2. Do not trust USB debug builds until they pass the Ethernet low-speed gate. A deterministic HPI0-trigger RTL experiment changed placement enough to break Ethernet RX despite timing meeting, so preserve the validated image before further compile experiments.
 3. Capture external USB HPI pins with a working SignalTap instance or an external logic analyzer during the read cycle: `OTG_DATA[15:0]`, `OTG_ADDR[1:0]`, `OTG_CS_N`, `OTG_RD_N`, `OTG_WR_N`, `OTG_RST_N`, and `OTG_INT`. The current `.stp` file is not embedding a usable capture instance.
 4. Run the next Beagle capture while physically reconnecting the KVM2USB/downstream side through the Beagle 12 inline analyzer.

@@ -1,6 +1,6 @@
 # Findings
 
-Date: 2026-04-26
+Date: 2026-04-27
 
 ## Current Status
 
@@ -154,15 +154,17 @@ HPI_HOST_MEM_RW_FAIL
 - Firmware build: passed.
 - SoC generation: passed with Ethernet Port 1.
 - Quartus full compile: passed with 0 errors.
-- Board programmed with the 10-only validation image on 2026-04-26 at 15:53:51, checksum `0x033D6EDD`; ping and Etherbone CSR stress tests passed after programming.
-- A copy of that validation image is tracked at `validation_images/de2_115_vga_platform_eth10_validated_20260426.sof`.
-- Validation image SHA256: `B886FAC43010C039237CBC94BE316AEF1796E6496DE63DEAD67AFB032FB9373A`.
-- Current board image was restored to the tracked 10-only validation image,
-  checksum `0x033D6EDD`, after a USB-debug image broke Ethernet receive. A
-  2026-04-26 restore smoke test passed Etherbone CSR stress for 256 loops after
-  18/20 ping replies. This image predates the switch pin-map correction, so the
-  current board reads `SWITCHES 0x00000008`; rebuild/program a corrected image
-  before using switch evidence.
+- Previous 10-only validation image from 2026-04-26 remains tracked at
+  `validation_images/de2_115_vga_platform_eth10_validated_20260426.sof`,
+  checksum `0x033D6EDD`, SHA256
+  `B886FAC43010C039237CBC94BE316AEF1796E6496DE63DEAD67AFB032FB9373A`.
+- Current board image is the corrected 10-only validation image, checksum
+  `0x033C9E9A`, programmed on 2026-04-27. It passed 50/50 ping, 512 Etherbone
+  CSR loops, and board GPIO smoke test with `SWITCHES 0x00000000`.
+- Current validation image is tracked at
+  `validation_images/de2_115_vga_platform_eth10_switchfix_validated_20260427.sof`
+  with SHA256
+  `653CBED08D4C91ABF81BCFD7B708D980828A67BBF8C49A840DA07FA2007DBE67`.
 - Timing: met, but the design is still not fully constrained.
 
 Known recurring Quartus warnings:
