@@ -9,6 +9,9 @@ Date: 2026-04-26
 - **Ethernet:** Port 1 is the active/default port and is working in the forced-MII low-speed path. AUTO10/100, 100-only, and 10-only variants each passed 50/50 ping to `192.168.178.50` plus 512 Etherbone red-LED CSR write/read loops through host TCP port `1235`. The current 10-only image also passed a longer 200/200 ping plus 4096 red-LED CSR loop regression.
 - **GPIO/visual self-test:** The current AUTO10/100 board image includes a host-driven visual self-test path. Red LEDs, green LEDs, 7-segment display CSRs, LCD GPIO, and the current switch vector were exercised over Etherbone and captured with `agentwebcam`. The switch pin map has been corrected; all aligned switches now read `0x00000000`.
 - **USB:** HPI address decode, HPI register order, write timing, and reset control have been corrected. HPI write data is visible on the bus, but CY7C67200 reads still return `0x0000`. A reset/sample-offset sweep over Etherbone also returned only zeroes.
+- **USB debug tooling:** Host HPI write/read diagnostics and HPI0 source/probe
+  decoding now exist. The repo USB SignalTap session was normalized, but
+  Quartus still does not embed a usable `auto_signaltap_0` capture instance.
 - **Board-wide device matrix:** `DEVICE_STATUS_AND_BRINGUP.md` now records the
   current status of every DE2-115 device class and the staged bring-up plan for
   remaining peripherals.
@@ -63,6 +66,13 @@ MEM CHECK: 0000 FAIL
 SIE1_INIT NOACK mb=0000 st=0000
 ```
 
+Latest host-triggered HPI diagnostic:
+
+```text
+HPI_HOST_RESULT addr=0x1000 wrote=0x1234 read=0x0000 status=0x0000 mailbox=0x0000
+HPI_HOST_MEM_RW_FAIL
+```
+
 ## USB Findings
 
 - The original USB debug decode was wrong because LiteX presents absolute Wishbone word addresses. The bridge now decodes only local low bits inside the USB window.
@@ -84,6 +94,17 @@ SIE1_INIT NOACK mb=0000 st=0000
   reprogramming, but no SOF/SETUP/IN/OUT packets. This confirms USB D+/D-
   wiring/analyzer placement is seeing the device side, but the CY7C67200 is not
   reaching initialized host traffic.
+- The Beagle 12 is currently inline between the KVM2USB and DE2-115 HOST port.
+  Passive captures with no physical reconnect produced no output with both the
+  project image and the Terasic USB host demo; the next useful Beagle run needs
+  a deliberate downstream unplug/replug while capture is active.
+- Attempting to embed `signaltap/usb_hpi_capture.stp` through the QSF
+  `SIGNALTAP_FILE` assignment still produced a SOF where `quartus_stp` reports
+  `Can't find the instance`. Reports show SLD hub/fabric only, not a usable
+  `sld_signaltap` node.
+- A deterministic HPI0 signature-trigger RTL experiment was not kept because it
+  perturbed placement enough to break Ethernet RX. Future USB instrumentation
+  builds must pass the Ethernet low-speed gate before being trusted.
 
 ## Ethernet Findings
 
@@ -136,10 +157,12 @@ SIE1_INIT NOACK mb=0000 st=0000
 - Board programmed with the 10-only validation image on 2026-04-26 at 15:53:51, checksum `0x033D6EDD`; ping and Etherbone CSR stress tests passed after programming.
 - A copy of that validation image is tracked at `validation_images/de2_115_vga_platform_eth10_validated_20260426.sof`.
 - Validation image SHA256: `B886FAC43010C039237CBC94BE316AEF1796E6496DE63DEAD67AFB032FB9373A`.
-- Current board image after the switch pin-map fix is the default AUTO10/100
-  image with board-test firmware hooks, checksum `0x033CA203`. Post-fix
-  regression on 2026-04-26 passed 50/50 ping plus 512 Etherbone CSR loops and
-  `BOARD_GPIO_SMOKE_TEST_PASS`.
+- Current board image was restored to the tracked 10-only validation image,
+  checksum `0x033D6EDD`, after a USB-debug image broke Ethernet receive. A
+  2026-04-26 restore smoke test passed Etherbone CSR stress for 256 loops after
+  18/20 ping replies. This image predates the switch pin-map correction, so the
+  current board reads `SWITCHES 0x00000008`; rebuild/program a corrected image
+  before using switch evidence.
 - Timing: met, but the design is still not fully constrained.
 
 Known recurring Quartus warnings:
@@ -151,7 +174,7 @@ Known recurring Quartus warnings:
 
 Ethernet next step: keep the low-speed regression script as the acceptance gate for future changes. If the board should be left in the general-purpose network baseline rather than a speed-specific validation image, rebuild/program the default AUTO10/100 firmware before continuing USB.
 
-For USB, do not keep changing LCP or SIE firmware until HPI readback is proven. Capture the external OTG pins during one write and one read, or compare with a known-good Terasic USB demo bitstream on the same board:
+For USB, do not keep changing LCP or SIE firmware until HPI readback is proven. Capture the external OTG pins during one write and one read with a working SignalTap instance or an external logic analyzer, or run the Beagle capture while physically reconnecting the downstream KVM2USB path:
 
 - `OTG_DATA[15:0]`
 - `OTG_ADDR[1:0]`

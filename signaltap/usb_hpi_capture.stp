@@ -1,6 +1,6 @@
 <session jtag_chain="USB-Blaster [USB-0]" jtag_device="@1: 10CL120(Y|Z)/EP3C120/.. (0x020F70DD)" sof_file="C:/Users/Mark/Projects/DE2-115/build/terasic_de2_115/gateware/de2_115_vga_platform.sof" top_level_entity="de2_115_vga_platform">
   <display_tree gui_logging_enabled="0">
-    <display_branch instance="auto_signaltap_0" log="USE_GLOBAL_TEMP" signal_set="USE_GLOBAL_TEMP" trigger="USE_GLOBAL_TEMP"/>
+    <display_branch instance="auto_signaltap_0" log="signal_set_1" signal_set="signal_set_1" trigger="trigger_1"/>
   </display_tree>
   <instance entity_name="sld_signaltap" is_auto_node="yes" is_expanded="true" name="auto_signaltap_0" source_file="sld_signaltap.vhd">
     <node_ip_info instance_id="0" mfg_id="110" node_id="0" version="6"/>
@@ -145,7 +145,7 @@
           </storage_qualifier_level>
         </storage_qualifier_events>
         <log>
-          <data global_temp="1" name="log: 2026/04/25 22:11:36  #0"/>
+          <data global_temp="1" name="log_1" power_up_mode="false" sample_depth="4095" trigger_position="-1"></data>
           <extradata/>
         </log>
       </trigger>

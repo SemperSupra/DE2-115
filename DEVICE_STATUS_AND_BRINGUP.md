@@ -43,7 +43,7 @@ integration.
 | SD card | Integrated, unvalidated | `add_sdcard()` is present; docs identify SD as next high-value device after USB/Ethernet confidence. | Add block read/write self-test, CID/CSD read, multi-block transfer, and FAT/FatFS smoke test. |
 | USB CY7C67200 HPI write path | Partially working | FPGA debug records write data such as `0x1234` at the HPI bus. | Preserve current bridge/register ordering; do not change LCP/SIE flow until readback works. |
 | USB CY7C67200 HPI read path | Blocked | CY registers and memory read as `0x0000`; source/probe shows valid read strobes but data remains zero. | Capture external HPI pins with SignalTap/logic analyzer; compare with Terasic USB demo bitstream. |
-| USB host mode Type-A | Blocked | Beagle USB 12 sees connect/disconnect/reset events but no SOF/SETUP/IN/OUT packets. | Fix HPI readback, then LCP load, `COMM_ACK`, `SIE1_INIT`, reset, connect message, and HID boot protocol. |
+| USB host mode Type-A | Blocked | Beagle USB 12 is inline between KVM2USB and the DE2-115 HOST port; passive captures show no packets without a fresh reconnect event. | Fix HPI readback, then LCP load, `COMM_ACK`, `SIE1_INIT`, reset, connect message, and HID boot protocol. Run Beagle captures while physically reconnecting the downstream path. |
 | USB device mode Type-B | Not started / blocked | User wants device mode, but HPI/CY readback blocks all CY7C67200 functional modes. | After HPI is fixed, bring up device demo path separately from host mode and test enumeration from PC. |
 | Audio codec | Not started | No current codec/I2C/audio data path evidence. | Audit codec pins and I2C control, add register read/write where possible, then line-out tone and line-in loopback tests. |
 | I2C control buses | Not started | No current board-level I2C validation. | Add minimal I2C master, scan expected devices, then use it for audio/video peripherals. |
@@ -62,6 +62,9 @@ integration.
 ## Bring-Up Principles
 
 - Preserve the Ethernet low-speed baseline before each major change.
+- Treat a USB-debug bitstream as invalid until the Ethernet low-speed regression
+  still passes. A small HPI0 source/probe trigger experiment broke Ethernet RX
+  through placement/timing sensitivity even though Quartus timing met.
 - Prefer one device and one failure boundary per bitstream.
 - Every device needs a firmware UART result and, where possible, an Etherbone
   host-driven test.

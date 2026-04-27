@@ -20,6 +20,12 @@ Workspace: `C:\Users\Mark\Projects\DE2-115`
 - **Board-wide device plan:** `DEVICE_STATUS_AND_BRINGUP.md` records the
   status of each DE2-115 device and the staged strategy for remaining bring-up.
 - **USB HPI:** The FPGA-side HPI bridge now decodes the USB window correctly, uses Terasic-style registered HPI control/data timing, and successfully drives write data onto the bus. The CY7C67200 still returns `0x0000` on all read attempts, including basic control registers and memory readback, so LCP/BIOS ACK still fails. Etherbone-driven reset and HPI sample-offset sweeps also returned only zeroes.
+- **Current programmed board image:** Restored to the tracked 10-only Ethernet
+  validation image after a USB-debug placement experiment broke Ethernet
+  receive. Checksum `0x033D6EDD`; 20-ping smoke had 18/20 replies and
+  Etherbone CSR stress passed 256 loops. This validation image predates the
+  switch pin-map fix, so `SWITCHES` reads `0x00000008` with all switches
+  aligned.
 
 ## Changes Since Previous Handoff
 
@@ -54,6 +60,13 @@ Workspace: `C:\Users\Mark\Projects\DE2-115`
 - Added `scripts/visual_board_selftest.py` for host-driven LCD text, LED/7-seg
   visual patterns, and `agentwebcam` screenshot/video capture.
 - Added `scripts/capture_uart.py` for bounded UART boot-log capture.
+- Added `scripts/usb_hpi_host_diag.py` for host-triggered CY7C67200 HPI
+  reset/write/read diagnostics over Etherbone.
+- Added `scripts/decode_hpi_probe.py` to decode the 192-bit `HPI0`
+  source/probe value.
+- Normalized `signaltap/usb_hpi_capture.stp` log/display names to `log_1` /
+  `signal_set_1`; Quartus still compiles only the SLD hub/fabric and
+  `quartus_stp` reports no `auto_signaltap_0` instance in the SOF.
 
 ## Latest Verified Board Log
 
@@ -102,6 +115,16 @@ SIE1_INIT NOACK mb=0000 st=0000
 USB_RESET NOACK mb=0000 st=0000
 ```
 
+Host-triggered HPI diagnostic over Etherbone:
+
+```text
+HPI_HOST_CFG 0x000208ff
+HPI_HOST_AFTER_WRITE cfg=0x000208ff ctrl=0x03200e00 sample=0x0000 cy=0x0000
+HPI_HOST_AFTER_READ cfg=0x000208ff ctrl=0x03200e00 sample=0x0000 cy=0x0000
+HPI_HOST_RESULT addr=0x1000 wrote=0x1234 read=0x0000 status=0x0000 mailbox=0x0000
+HPI_HOST_MEM_RW_FAIL
+```
+
 Command-line HPI source/probe during a DATA read showed:
 
 ```text
@@ -116,8 +139,11 @@ Interpretation:
 - USB reads are not returning CY7C67200-driven data; the sampled bus remains zero.
 - Ethernet has moved past pinout/link detection and is usable for ping and Etherbone CSR transactions in AUTO10/100, 100-only, and 10-only low-speed modes.
 - Beagle USB 12 inline capture on the DE2-115 USB HOST path sees target
-  connect/disconnect/reset events but no USB packets. This points back to the
-  CY7C67200/HPI bring-up failure, not HID/KVM enumeration logic.
+  connect/disconnect/reset events but no USB packets. The Beagle 12 remains
+  inline between the KVM2USB and the DE2-115 HOST Type-A port. Passive captures
+  with both this image and the Terasic USB host demo produced no packet output
+  without a fresh physical reconnect event, so the next Beagle test should run
+  while the KVM2USB/downstream side is unplugged/replugged.
 
 ## Verified Build Commands
 
@@ -169,14 +195,15 @@ python scripts\visual_board_selftest.py --start-server --port 1238 --camera 1 --
 
 ## Remaining Work
 
-1. Keep `scripts/ethernet_low_speed_test.py` as the acceptance gate before/after USB changes. Current programmed image is the general-purpose AUTO10/100 board-test image with corrected switch pins, checksum `0x033CA203`; the tracked 10-only validation image remains preserved in `validation_images/`.
-2. Capture external USB HPI pins with SignalTap or a logic analyzer during the read cycle: `OTG_DATA[15:0]`, `OTG_ADDR[1:0]`, `OTG_CS_N`, `OTG_RD_N`, `OTG_WR_N`, `OTG_RST_N`, and `OTG_INT`.
-3. Compare the same board against a known-good Terasic USB demo bitstream to rule out board/CY7C67200 hardware state.
-4. Once USB readback works, resume LCP load verification and mailbox ACK flow.
-5. Keep gigabit Ethernet deferred in the backlog; later add a separate gigabit cleanup task using `ETH0`/`ETX0` captures.
-6. Use `DEVICE_STATUS_AND_BRINGUP.md` as the board-wide backlog. Start SD card
+1. Keep `scripts/ethernet_low_speed_test.py` as the acceptance gate before/after USB changes. Current programmed image is the tracked 10-only validation image, checksum `0x033D6EDD`; it restores Ethernet but does not include the switch pin-map fix.
+2. Do not trust USB debug builds until they pass the Ethernet low-speed gate. A deterministic HPI0-trigger RTL experiment changed placement enough to break Ethernet RX despite timing meeting, so preserve the validated image before further compile experiments.
+3. Capture external USB HPI pins with a working SignalTap instance or an external logic analyzer during the read cycle: `OTG_DATA[15:0]`, `OTG_ADDR[1:0]`, `OTG_CS_N`, `OTG_RD_N`, `OTG_WR_N`, `OTG_RST_N`, and `OTG_INT`. The current `.stp` file is not embedding a usable capture instance.
+4. Run the next Beagle capture while physically reconnecting the KVM2USB/downstream side through the Beagle 12 inline analyzer.
+5. Once USB readback works, resume LCP load verification and mailbox ACK flow.
+6. Keep gigabit Ethernet deferred in the backlog; later add a separate gigabit cleanup task using `ETH0`/`ETX0` captures.
+7. Use `DEVICE_STATUS_AND_BRINGUP.md` as the board-wide backlog. Start SD card
    bring-up after USB is unblocked enough to avoid losing the hardware-debug
    thread.
-7. To fully validate independent transitions for all 18 switches, manually walk
+8. To fully validate independent transitions for all 18 switches, manually walk
    each switch and record the `switches_in` CSR value. Current evidence
    validates the all-aligned vector `0x00000000` after correcting the pin map.

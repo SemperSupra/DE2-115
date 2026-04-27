@@ -9,6 +9,11 @@ This project now has enough firmware-side evidence to make the next USB debug st
 - **ISSP/altsource_probe:** Present for `HPI0`, `ETH0`, `ETX0`, and `ARP0`; command-line STP reads work from elevated host PowerShell.
 - **Quartus-native debug:** Preferred for external pin truth because Quartus runs on the Windows host with direct USB-Blaster access.
 - **Capture files:** `signaltap/usb_hpi_capture.stp` and `signaltap/eth_rgmii_capture.stp` are the current repo-tracked sessions. Run them with elevated `quartus_stp.exe` on the host, not inside Docker.
+- **Current limitation:** `signaltap/usb_hpi_capture.stp` has normalized
+  `signal_set_1` / `log_1` names, but embedding it with `SIGNALTAP_FILE` still
+  produces a SOF where `quartus_stp` reports no `auto_signaltap_0` instance.
+  Use HPI0 source/probe or an external analyzer until a real `sld_signaltap`
+  node is visible in the reports/SOF.
 
 ## Debug Priorities
 
@@ -20,7 +25,8 @@ Current evidence:
 HPI DBG WR ... sample=00001234 cy=00001234
 HPI DBG RD ... sample=00000000 cy=00000000
 HPI0 read_data: rst=0 hpi_rst_n=1 cs_n=0 rd_n=0 wr_n=1 addr=0 data=0000
-Beagle USB 12: TGT_CONNECT/TGT_DISCON/RESET events only, no SOF/SETUP packets
+Beagle USB 12: inline between KVM2USB and DE2-115 HOST port; passive captures
+without reconnect show no packets
 ```
 
 Interpretation:
@@ -29,6 +35,8 @@ Interpretation:
 - FPGA HPI read cycle is being issued.
 - The CY7C67200 is not returning nonzero data at the FPGA pad sample point. An Etherbone reset/sample sweep from 0 to 60 cycles also returned only zeroes, so a simple sample-offset change is unlikely to fix it.
 - USB-line capture sees target presence/reset transitions but no host packets, so the CY is not reaching a functional USB-host state.
+- Passive Beagle captures can miss the useful attach window; run capture while
+  unplugging/replugging the downstream KVM2USB side through the Beagle.
 
 SignalTap should capture external pads, not only internal bridge state.
 
