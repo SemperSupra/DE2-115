@@ -21,7 +21,7 @@ BUILD_DIR=../../build/$TARGET
 include \$(BUILD_DIR)/software/include/generated/variables.mak
 include \$(SOC_DIRECTORY)/software/common.mak
 
-OBJECTS = main.o font_8x16.o
+OBJECTS = main.o font_8x16.o cy7c67200_hpi.o cy7c67200_lcp.o cy7c67200_scan.o cy7c67200_bringup.o
 CRT0_FILE = \$(BUILD_DIR)/software/bios/crt0.o
 
 all: demo.bin

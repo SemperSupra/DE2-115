@@ -65,16 +65,34 @@ def run_diag(args):
     wb = RemoteClient(host=args.host, port=args.port, csr_csv=args.csr_csv)
     wb.open()
     try:
-        cfg = hpi_cfg(1, 0, args.access_cycles, args.sample_offset, args.turnaround_cycles)
-        wb.write(BRIDGE_CFG0, cfg)
+        # Phase 1: Robust Reset & Timing Optimization
+        print(f"Applying Reset (Low={args.reset_low}s, High={args.reset_high}s)...")
+        # Hold in reset, slow timing for safety during reset state
+        cfg_rst = hpi_cfg(1, 0, 63, 8, 8)
+        wb.write(BRIDGE_CFG0, cfg_rst)
         time.sleep(args.reset_low)
-        cfg = hpi_cfg(1, 1, args.access_cycles, args.sample_offset, args.turnaround_cycles)
-        wb.write(BRIDGE_CFG0, cfg)
+        # Release reset, apply optimized timing
+        cfg_run = hpi_cfg(1, 1, args.access_cycles, args.sample_offset, args.turnaround_cycles)
+        wb.write(BRIDGE_CFG0, cfg_run)
         time.sleep(args.reset_high)
 
-        print(f"HPI_HOST_CFG 0x{cfg:08x}")
-        dump_bridge(wb, "HPI_HOST_BEFORE")
+        print(f"HPI_HOST_CFG 0x{cfg_run:08x}")
+        dump_bridge(wb, "HPI_HOST_INITIAL")
 
+        # Phase 2: Hardware Register Loopback (HPI_ADDRESS is a latch)
+        test_val = 0xABCD
+        print(f"Testing HPI_ADDRESS latch with 0x{test_val:04x}...")
+        write16(wb, HPI_ADDRESS, test_val)
+        read_val = read16(wb, HPI_ADDRESS)
+        print(f"HPI_ADDRESS Result: Wrote=0x{test_val:04x}, Read=0x{read_val:04x}")
+
+        if read_val == test_val:
+            print("HPI_HARDWARE_INTERFACE_OK")
+        else:
+            print("HPI_HARDWARE_INTERFACE_FAIL")
+
+        # Phase 3: Memory R/W Test
+        print(f"Testing Memory R/W at 0x{args.test_addr:04x} with 0x{args.test_data:04x}...")
         write16(wb, HPI_ADDRESS, args.test_addr)
         write16(wb, HPI_DATA, args.test_data)
         dump_bridge(wb, "HPI_HOST_AFTER_WRITE")
@@ -90,18 +108,20 @@ def run_diag(args):
             f"wrote=0x{args.test_data:04x} read=0x{readback:04x} "
             f"status=0x{status:04x} mailbox=0x{mailbox:04x}"
         )
+        
         if readback == (args.test_data & 0xFFFF):
-            print("HPI_HOST_MEM_RW_PASS")
+            print("HPI_MEM_RW_PASS")
         else:
-            print("HPI_HOST_MEM_RW_FAIL")
+            print("HPI_MEM_RW_FAIL")
             if args.fail_on_mismatch:
                 raise SystemExit(1)
+                
     finally:
         wb.close()
 
 
 def main():
-    p = argparse.ArgumentParser(description="Host-triggered CY7C67200 HPI write/read diagnostic over Etherbone")
+    p = argparse.ArgumentParser(description="Host-triggered CY7C67200 HPI diagnostic")
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=1235)
     p.add_argument("--csr-csv", default="build/terasic_de2_115/csr.csv")
@@ -111,11 +131,11 @@ def main():
     p.add_argument("--server-start-timeout", type=float, default=8.0)
     p.add_argument("--test-addr", type=lambda v: int(v, 0), default=0x1000)
     p.add_argument("--test-data", type=lambda v: int(v, 0), default=0x1234)
-    p.add_argument("--access-cycles", type=int, default=63)
-    p.add_argument("--sample-offset", type=int, default=8)
-    p.add_argument("--turnaround-cycles", type=int, default=8)
-    p.add_argument("--reset-low", type=float, default=0.05)
-    p.add_argument("--reset-high", type=float, default=0.50)
+    p.add_argument("--access-cycles", type=int, default=10) # 200ns @ 50MHz
+    p.add_argument("--sample-offset", type=int, default=2)
+    p.add_argument("--turnaround-cycles", type=int, default=2)
+    p.add_argument("--reset-low", type=float, default=0.5)
+    p.add_argument("--reset-high", type=float, default=0.5)
     p.add_argument("--initial-delay", type=float, default=0.0)
     p.add_argument("--fail-on-mismatch", action="store_true")
     args = p.parse_args()

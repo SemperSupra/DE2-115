@@ -354,7 +354,7 @@ class DE2_115VGAMaster(SoCCore):
         # Leave CY7C67200 boot-selection pins to the board straps. Driving HPI
         # data pins during reset caused readback to float high on this board.
         # The registered Terasic HPI interface now owns OTG_RST_N.
-        self.comb += self.usb_otg.force_hpi_boot.eq(0)
+        self.comb += self.usb_otg.force_hpi_boot.eq(1)
 
 if __name__ == "__main__":
     import argparse
