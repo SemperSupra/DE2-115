@@ -211,6 +211,21 @@ Workspace: `C:\Users\Mark\Projects\DE2-115`
   stand-alone is `GPIO30=1/GPIO31=1`. The current platform does not expose
   documented `GPIO30/GPIO31` boot pins, so `force_hpi_boot` remains a stub and
   should not be treated as a real strap override.
+- **2026-05-05 mailbox sideband/write-window result:** Added
+  `scripts\hpi_mailbox_sideband_probe.py` and
+  `scripts\run_hpi_mailbox_sideband_probe.ps1` to exercise MAILBOX writes while
+  HPI0 source/probe captures idle, post-write idle, and a concurrent mailbox
+  write window. The first full run passed the Ethernet gate and reproduced
+  zero STATUS/MAILBOX readback. After fixing the concurrent capture timing, the
+  narrow rerun
+  `powershell -ExecutionPolicy Bypass -File .\scripts\run_hpi_mailbox_sideband_probe.ps1 -Log local_artifacts\hpi_mailbox_sideband_probe_rerun4.log -SkipEthernetGate -Values 0xfa50`
+  captured the intended write: `captured=1`, `match=1`, `diag_src=0x000c`,
+  `CS_N=0`, `WR_N=0`, `RD_N=1`, `ADDR=1`, reset released, and
+  `write_data=sample_data=cy_o_data=hpi_data=0xfa50`. Idle captures still show
+  `INT0=1`, `INT1=1`, `DREQ=0`; follow-up STATUS/MAILBOX reads still return
+  `0x0000`. This confirms the FPGA drives MAILBOX writes correctly and the
+  source/probe can catch the write window, but it does not show CY firmware/BIOS
+  response to the mailbox command.
 - **2026-05-03 tool note:** `scripts/build_soc.sh` now stages generated
   Quartus host inputs (`.qsf`, `.sdc`, top Verilog, VexRiscv, init files) into
   the repo root. `scripts/load_bitstream.ps1` now selects the newest candidate
@@ -457,12 +472,13 @@ python scripts\visual_board_selftest.py --start-server --port 1238 --camera 1 --
 1. Keep `scripts/ethernet_low_speed_test.py` as the acceptance gate before/after USB changes. The current programmed image is the weak-pullup diagnostic checksum `0x03332BFF`; the normal root image checksum is `0x033328D9`; the tracked corrected 10-only validation fallback remains checksum `0x033C9E9A`.
 2. The next USB ladder step is CY clock and HPI boot-mode strap validation. `force_hpi_boot` is currently a stub tied to zero; the platform does not expose GPIO30/GPIO31 strap pins, and the DE2 manual shows CY `XTALIN` comes from MAX II `EPM240` at `12MHz`, not the Cyclone IV. Do not assume the FPGA can force HPI boot or CY clock without schematic-backed pin additions. Use `scripts\run_hpi_no_analyzer_contrast.ps1` and `scripts\run_hpi_reset_timing_sweep.ps1` to rerun proof after each change.
 3. Do not add passive bridge status bits into `last_ctrl` for routine USB debug. The split test showed that exposing `hpi_int0`, `hpi_int1`, `hpi_dreq`, and `diag_in` there can break Ethernet RX despite timing meeting. Use SignalTap/external analyzer capture or a tightly gated debug image instead.
-4. Embedded LiteScope, HPI0 source/probe, and the weak-pullup contrast now
-   prove the FPGA asserts read controls correctly, released/reset-low DATA
-   reads high, and only active HPI read cycles sample zero. Without an
-   external analyzer, move the next debug step to CY clock/HPI mode/boot
-   straps and board-level DATA bus hold causes. Reset timing alone did not
-   recover readback.
+4. Embedded LiteScope, HPI0 source/probe, weak-pullup contrast, and mailbox
+   write-window capture now prove the FPGA asserts read controls correctly,
+   drives write data correctly, released/reset-low DATA reads high, and only
+   active HPI read cycles sample zero. Without an external analyzer, move the
+   next debug step to CY clock/HPI mode/boot straps and board-level DATA bus
+   hold causes. Reset timing and confirmed mailbox writes did not recover
+   readable CY STATUS/MAILBOX/DATA.
 5. Run the next Beagle capture with a simple known-good low/full-speed USB
    mouse or keyboard connected through the Beagle to the DE2-115 HOST port.
    Terasic's host mouse demo is the preferred comparison image for that test.

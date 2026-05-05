@@ -75,6 +75,13 @@ This project now has enough firmware-side evidence to make the next USB debug st
   local manual evidence. DE2-115 Figure 4-31 shows CY `XTALIN` fed by MAX II
   `EPM240` at `12MHz`; BIOS boot mode uses `GPIO30/GPIO31`; the current FPGA
   platform does not expose those boot pins.
+- **Mailbox write-window probe:** `scripts\run_hpi_mailbox_sideband_probe.ps1`
+  wraps `scripts\hpi_mailbox_sideband_probe.py` and uses HPI0 source/probe mode
+  `6` to capture MAILBOX writes. The verified narrow run in
+  `local_artifacts\hpi_mailbox_sideband_probe_rerun4.log` captured
+  `0xfa50` with `CS_N=0`, `WR_N=0`, `RD_N=1`, `ADDR=1`, and all write data
+  views equal to `0xfa50`. STATUS/MAILBOX reads after the write still returned
+  zero and sidebands stayed idle (`INT0=1`, `INT1=1`, `DREQ=0`).
 
 ## Debug Priorities
 
@@ -102,6 +109,9 @@ device demo.
 Interpretation:
 
 - FPGA HPI write drive is working.
+- FPGA MAILBOX write drive is also working; HPI0 source/probe captured an
+  intentional `0xfa50` write on `ADDR=1` with the expected active write
+  strobes.
 - FPGA HPI read cycle is being issued.
 - The CY7C67200 is not returning nonzero data at the FPGA pad sample point. An Etherbone reset/sample sweep from 0 to 60 cycles also returned only zeroes, so a simple sample-offset change is unlikely to fix it.
 - With FPGA weak pull-ups enabled on `OTG_DATA[15:0]`, DATA reads still sample

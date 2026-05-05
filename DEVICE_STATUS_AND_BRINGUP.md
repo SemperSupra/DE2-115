@@ -76,6 +76,17 @@
   `XTALIN` feed from MAX II `EPM240`. The BIOS manual says HPI co-processor
   boot requires `GPIO30=0/GPIO31=0`. Those boot pins are not exposed in the
   current platform, so `force_hpi_boot` is not a real strap override.
+- 2026-05-05 mailbox sideband probe:
+  `scripts\run_hpi_mailbox_sideband_probe.ps1` now arms HPI0 source/probe
+  before issuing mailbox writes. Narrow rerun
+  `local_artifacts\hpi_mailbox_sideband_probe_rerun4.log` captured an
+  intentional `0xfa50` mailbox write with `captured=1`, `match=1`, `CS_N=0`,
+  `WR_N=0`, `RD_N=1`, `ADDR=1`, reset released, and
+  `write_data/sample_data/cy_o_data/hpi_data=0xfa50`. The subsequent STATUS
+  and MAILBOX reads still returned `0x0000`, and idle sidebands stayed
+  `INT0=1`, `INT1=1`, `DREQ=0`. This proves the FPGA write-window drive and
+  HPI0 capture path are working, but it does not prove the CY BIOS is
+  processing mailbox commands.
 
 ## Critical Findings
 1. CY7C67200 Host port power is supplied via a robust 5V rail, bypassing the internal 10mA charge pump.
@@ -95,8 +106,9 @@
    mouse or keyboard on the DE2-115 HOST path.
 4. Next HPI step without an external analyzer: inspect CY7C67200 reset/clock
    and HPI boot-mode strap assumptions. Longer reset-low and post-release
-   settle windows did not recover reads. The weak-pullup contrast proves the
-   FPGA input path reads released DATA high, while active HPI reads drive or
-   hold DATA low.
+   settle windows did not recover reads, and mailbox writes are now proven at
+   the pins without producing readable STATUS/MAILBOX response. The
+   weak-pullup contrast proves the FPGA input path reads released DATA high,
+   while active HPI reads drive or hold DATA low.
 5. Verify `SOF` (Start of Frame) packet generation.
 6. If enumeration stalls, compare descriptor packets with Terasic Host Demo packet logs to isolate firmware-level USB protocol issues.
