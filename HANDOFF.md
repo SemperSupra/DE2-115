@@ -245,6 +245,21 @@ Workspace: `C:\Users\Mark\Projects\DE2-115`
   non-authoritative `0x0011` artifact in two mappings and no real DATA,
   MAILBOX, or STATUS response. This makes HPI address-order confusion unlikely
   to be the root blocker.
+- **2026-05-05 live reset-release sideband watch:** Added
+  `scripts\run_hpi_reset_release_live_sideband_watch.ps1` to keep HPI0
+  source/probe running across CY reset release. The useful run used
+  `-PreReleaseMs 4000` and logged
+  `local_artifacts\hpi_reset_release_live_sideband_watch_prerelease4s.log`.
+  Samples `0..19` decoded as reset-low: `hpi_rst_n=0`, `INT0=0`, `INT1=1`,
+  `DREQ=0`, idle DATA high. Samples `20..29` decoded as released:
+  `hpi_rst_n=1`, `INT0=1`, `INT1=1`, `DREQ=0`, idle DATA high. No short
+  sideband pulse or DREQ activity was observed at this sampling rate.
+- **2026-05-05 Cypress boot-strap note:** `docs\CY7C67200_BOARD_WIRING_FACTS.md`
+  now records the local `hpi_manual.pdf` warning that `GPIO30/GPIO31` are also
+  I2C lines and may power up high due to pull-ups, selecting standalone/EEPROM
+  behavior unless the board actively straps them otherwise. This sharpens the
+  remaining board-level question: what does the DE2-115 actually do to those
+  pins at reset?
 - **2026-05-03 tool note:** `scripts/build_soc.sh` now stages generated
   Quartus host inputs (`.qsf`, `.sdc`, top Verilog, VexRiscv, init files) into
   the repo root. `scripts/load_bitstream.ps1` now selects the newest candidate
@@ -498,7 +513,9 @@ python scripts\visual_board_selftest.py --start-server --port 1238 --camera 1 --
    next debug step to CY clock/HPI mode/boot straps and board-level DATA bus
    hold causes. Reset timing, confirmed mailbox writes, and reset-release
    sideband sampling did not recover readable CY STATUS/MAILBOX/DATA; neither
-   did exhaustive logical-port permutation.
+   did exhaustive logical-port permutation. The most concrete remaining
+   no-analyzer target is the CY `GPIO30/GPIO31` strap/EEPROM path and MAX II
+   `12MHz` clock ownership.
 5. Run the next Beagle capture with a simple known-good low/full-speed USB
    mouse or keyboard connected through the Beagle to the DE2-115 HOST port.
    Terasic's host mouse demo is the preferred comparison image for that test.

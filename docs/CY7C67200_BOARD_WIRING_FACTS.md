@@ -38,11 +38,21 @@ Source: `hw_notes.pdf`, pages 3-4.
 - The recommended CY clock source is a `12MHz` crystal or oscillator connected
   to `XTALIN`; if an oscillator is used, `XTALOUT` is left unconnected.
 
+Source: `hpi_manual.pdf`, page 38 of the extracted book text.
+
+- Cypress example material explicitly warns that `GPIO30` and `GPIO31` are also
+  used for I2C and can power up high due to pull-up resistors.
+- Those high states select the standalone/EEPROM boot path in the Cypress
+  example, so the DE2-115 must have some board-specific strap or MAX II/EEPROM
+  behavior if it really powers up in HPI co-processor mode.
+
 ## Implication
 
 The current FPGA design should not claim to force HPI boot mode unless a
 schematic-backed `GPIO30/GPIO31` path is added. The existing `force_hpi_boot`
 signal is tied to zero and is not connected to documented DE2-115 CY boot pins.
+The next board-level check is the actual DE2-115 `GPIO30/GPIO31` strap/EEPROM
+path at reset, not another Cyclone IV signal assignment.
 
 The next no-analyzer debug target is therefore the board-level CY clock/boot
 state, not another reset-duration change. The weak-pullup and reset-timing runs

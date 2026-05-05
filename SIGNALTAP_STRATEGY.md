@@ -93,6 +93,12 @@ This project now has enough firmware-side evidence to make the next USB debug st
   `local_artifacts\hpi_address_permutation_probe_reset_each.log` produced
   `match=0` for every mapping; only the known `0x0011` address-slot artifact
   appeared.
+- **Live reset-release sideband watch:**
+  `scripts\run_hpi_reset_release_live_sideband_watch.ps1` keeps HPI0
+  source/probe sampling across reset release. With `-PreReleaseMs 4000`,
+  samples `0..19` showed reset-low (`INT0=0`, `INT1=1`, `DREQ=0`) and samples
+  `20..29` showed released (`INT0=1`, `INT1=1`, `DREQ=0`); idle DATA stayed
+  high throughout.
 
 ## Debug Priorities
 
@@ -125,6 +131,8 @@ Interpretation:
   strobes.
 - FPGA reset control has an observable sideband effect: `INT0` is low while
   reset is asserted and returns high after release.
+- A live source/probe watch across reset release did not show `DREQ` activity
+  or any interrupt pulse beyond the expected `INT0` level change.
 - HPI address-order confusion is unlikely: all 24 logical-port permutations
   failed to produce a valid DATA readback or readable STATUS/MAILBOX response.
 - FPGA HPI read cycle is being issued.

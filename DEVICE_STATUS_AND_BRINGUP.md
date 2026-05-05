@@ -105,6 +105,20 @@
   non-authoritative `0x0011` artifact in two mappings that route DATA reads
   through the address-slot behavior. No permutation produced a real DATA,
   MAILBOX, or STATUS response.
+- 2026-05-05 live reset-release sideband watch:
+  `scripts\run_hpi_reset_release_live_sideband_watch.ps1` keeps HPI0
+  source/probe running while reset is released. With `-PreReleaseMs 4000`, log
+  `local_artifacts\hpi_reset_release_live_sideband_watch_prerelease4s.log`
+  captured samples `0..19` while reset was low (`hpi_rst_n=0`, `INT0=0`,
+  `INT1=1`, `DREQ=0`, idle DATA high), then samples `20..29` after release
+  (`hpi_rst_n=1`, `INT0=1`, `INT1=1`, `DREQ=0`, idle DATA high). No short
+  sideband pulse or DREQ activity was observed across release at this sampling
+  rate.
+- 2026-05-05 local Cypress example check: `hpi_manual.pdf` notes that
+  `GPIO30/GPIO31` are also I2C lines and may power up high due to pull-ups,
+  selecting standalone/EEPROM behavior unless the board straps them otherwise.
+  `docs\CY7C67200_BOARD_WIRING_FACTS.md` now records this as the next concrete
+  board-level strap check.
 
 ## Critical Findings
 1. CY7C67200 Host port power is supplied via a robust 5V rail, bypassing the internal 10mA charge pump.
@@ -128,7 +142,9 @@
    the pins without producing readable STATUS/MAILBOX response. Reset-release
    sideband sampling shows reset affects `INT0`, but no post-release sideband
    activity appears. An exhaustive logical-port permutation sweep did not
-   recover readback. The weak-pullup contrast proves the FPGA input path reads
-   released DATA high, while active HPI reads drive or hold DATA low.
+   recover readback, and live reset-release watching saw no `DREQ` or interrupt
+   pulse besides the expected reset-low/released `INT0` level change. The
+   weak-pullup contrast proves the FPGA input path reads released DATA high,
+   while active HPI reads drive or hold DATA low.
 5. Verify `SOF` (Start of Frame) packet generation.
 6. If enumeration stalls, compare descriptor packets with Terasic Host Demo packet logs to isolate firmware-level USB protocol issues.
