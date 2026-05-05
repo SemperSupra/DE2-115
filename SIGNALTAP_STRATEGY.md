@@ -48,6 +48,15 @@ This project now has enough firmware-side evidence to make the next USB debug st
   `local_artifacts\hpi_live_source_probe_capture.txt` as reset released,
   `CS_N=0`, `RD_N=0`, `WR_N=1`, `ADDR=0`, and all data fields `0x0000`.
   Use this as the internal reference for the external analyzer capture.
+- **No-analyzer fallback:** `scripts\run_hpi_weak_pullup_diag.ps1` builds a
+  diagnostic image with weak pull-ups on `usb_otg_data[15:0]`, programs it,
+  runs the Ethernet gate, and repeats HPI write/read cycles. This is the
+  replacement for an external DATA-bus capture when no logic analyzer is
+  available.
+- **Weak-pullup result:** The weak-pullup image checksum `0x03332BFF` passed
+  Ethernet and the fitter reported `Weak Pull Up = On` on all `usb_otg_data`
+  pins. HPI DATA reads still returned all zeroes across eight cycles, so the
+  zero readback is not explained by an undriven FPGA input floating low.
 
 ## Debug Priorities
 
@@ -77,6 +86,9 @@ Interpretation:
 - FPGA HPI write drive is working.
 - FPGA HPI read cycle is being issued.
 - The CY7C67200 is not returning nonzero data at the FPGA pad sample point. An Etherbone reset/sample sweep from 0 to 60 cycles also returned only zeroes, so a simple sample-offset change is unlikely to fix it.
+- With FPGA weak pull-ups enabled on `OTG_DATA[15:0]`, DATA reads still sample
+  `0x0000`. If the bus were simply released, the weak-pullup image should have
+  pushed reads toward `0xffff`.
 - USB-line capture sees target presence/reset transitions but no host packets, so the CY is not reaching a functional USB-host state.
 - The DE2 HOST path does not currently reach packet traffic even with the
   Terasic host mouse demo. Before more HID class work, repeat the Beagle test
@@ -88,7 +100,7 @@ Interpretation:
 
 SignalTap should capture external pads, not only internal bridge state, but it
 must first pass the Ethernet gate. Until then, external logic analyzer capture
-or HPI0 source/probe is the safer route.
+or the weak-pullup diagnostic image is the safer route.
 
 Signals:
 

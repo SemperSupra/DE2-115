@@ -42,11 +42,23 @@ sed -i \
     -e 's|/pythondata-cpu-vexriscv/pythondata_cpu_vexriscv/verilog/VexRiscv.v|VexRiscv.v|g' \
     "$GATEWARE_DIR/de2_115_vga_platform.qsf"
 
-sed -i '/^set_global_assignment -name SIGNALTAP_FILE /d' "$GATEWARE_DIR/de2_115_vga_platform.qsf"
+sed -i \
+    -e '/^set_global_assignment -name ENABLE_SIGNALTAP /d' \
+    -e '/^set_global_assignment -name SIGNALTAP_FILE /d' \
+    -e '/^set_global_assignment -name USE_SIGNALTAP_FILE /d' \
+    "$GATEWARE_DIR/de2_115_vga_platform.qsf"
 if [ -n "$SIGNALTAP_FILE" ]; then
     SIGNALTAP_FILE_BASENAME=$(basename "$SIGNALTAP_FILE")
     cp "$SIGNALTAP_FILE" "$GATEWARE_DIR/$SIGNALTAP_FILE_BASENAME"
-    printf '\nset_global_assignment -name SIGNALTAP_FILE %s\n' "$SIGNALTAP_FILE_BASENAME" >> "$GATEWARE_DIR/de2_115_vga_platform.qsf"
+    printf '\nset_global_assignment -name ENABLE_SIGNALTAP ON\n' >> "$GATEWARE_DIR/de2_115_vga_platform.qsf"
+    printf 'set_global_assignment -name USE_SIGNALTAP_FILE %s\n' "$SIGNALTAP_FILE_BASENAME" >> "$GATEWARE_DIR/de2_115_vga_platform.qsf"
+fi
+
+if [ "${DE2_USB_HPI_WEAK_PULLUPS:-0}" = "1" ]; then
+    printf '\n# USB HPI read-bus diagnostic: weakly bias DATA high when no device drives it.\n' >> "$GATEWARE_DIR/de2_115_vga_platform.qsf"
+    for bit in $(seq 0 15); do
+        printf 'set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to usb_otg_data[%s]\n' "$bit" >> "$GATEWARE_DIR/de2_115_vga_platform.qsf"
+    done
 fi
 
 echo "--- Copying VexRiscv CPU Verilog ---"
@@ -61,5 +73,15 @@ cp "$HPI_BRIDGE_SRC" "$GATEWARE_DIR/"
 cp "$CY_IF_SRC" "$GATEWARE_DIR/"
 cp "$VGA_TEXT_SRC" "$GATEWARE_DIR/"
 
+echo "--- Staging Quartus host inputs ---"
+cp "$GATEWARE_DIR/de2_115_vga_platform.qsf" "$(pwd)/de2_115_vga_platform.qsf"
+cp "$GATEWARE_DIR/de2_115_vga_platform.sdc" "$(pwd)/de2_115_vga_platform.sdc"
+cp "$GATEWARE_DIR/de2_115_vga_platform.v" "$(pwd)/de2_115_vga_platform.v"
+cp "$GATEWARE_DIR/VexRiscv.v" "$(pwd)/VexRiscv.v"
+cp "$GATEWARE_DIR"/*.init "$(pwd)/"
+if [ -n "$SIGNALTAP_FILE_BASENAME" ]; then
+    cp "$GATEWARE_DIR/$SIGNALTAP_FILE_BASENAME" "$(pwd)/$SIGNALTAP_FILE_BASENAME"
+fi
+
 echo "--- Build Complete ---"
-echo "Bitstream location: build/terasic_de2_115/gateware/terasic_de2_115.sof"
+echo "Quartus project staged at repo root; compile with quartus_sh --flow compile de2_115_vga_platform"

@@ -158,6 +158,25 @@ Workspace: `C:\Users\Mark\Projects\DE2-115`
   `match=1`, and `hpi_data/cy_o_data/sample_data/read_data=0x0000`.
   This confirms the active loop is generating the intended internal DATA-read
   condition; the remaining evidence must come from the physical HPI pads.
+- **2026-05-05 no-analyzer fallback:** Added a weak-pullup HPI DATA diagnostic.
+  `DE2_USB_HPI_WEAK_PULLUPS=1 /workspace/scripts/build_soc.sh 1` now appends
+  `WEAK_PULL_UP_RESISTOR ON` for `usb_otg_data[0]` through
+  `usb_otg_data[15]`. `scripts\run_hpi_weak_pullup_diag.ps1` automates the
+  weak-pullup SoC generation, Quartus compile, programming, Ethernet gate, and
+  eight HPI write/read cycles. Interpretation: if HPI DATA reads become
+  `0xffff` or mostly high, the CY7C67200 is not driving the read bus; if reads
+  remain `0x0000`, the CY/board path is actively holding the bus low during
+  reads.
+- **2026-05-05 weak-pullup result:** Built the weak-pullup image and Quartus
+  completed successfully at 17:53:43. The programmed SOF checksum was
+  `0x03332BFF`. The fitter pin table confirms `Weak Pull Up = On` for
+  `usb_otg_data[0]` through `usb_otg_data[15]`. Ethernet remained usable:
+  49/50 ping plus 512 `lcd_out` CSR loops passed. Eight HPI DATA write/read
+  cycles still returned `read=0x0000`, `sample=0x0000`, `cy=0x0000`,
+  `ctrl=0x03200800`. This rules against a simple high-Z read bus floating low
+  at the FPGA input; with weak pull-ups enabled, released lines should have
+  sampled high. The next debug target is why the CY/board path is holding DATA
+  low or not entering a readable HPI state.
 - **2026-05-03 tool note:** `scripts/build_soc.sh` now stages generated
   Quartus host inputs (`.qsf`, `.sdc`, top Verilog, VexRiscv, init files) into
   the repo root. `scripts/load_bitstream.ps1` now selects the newest candidate
@@ -403,12 +422,11 @@ python scripts\visual_board_selftest.py --start-server --port 1238 --camera 1 --
 1. Keep `scripts/ethernet_low_speed_test.py` as the acceptance gate before/after USB changes. The current programmed root image is checksum `0x033328D9`; the tracked corrected 10-only validation fallback remains checksum `0x033C9E9A`.
 2. The next USB ladder step can use the current root image. Capture HPI/USB evidence with `.HPI_INT(hpi_int1)`, `last_ctrl` debug tail zeros, and USB interrupt pins `int0=D5`, `int1=E5`.
 3. Do not add passive bridge status bits into `last_ctrl` for routine USB debug. The split test showed that exposing `hpi_int0`, `hpi_int1`, `hpi_dreq`, and `diag_in` there can break Ethernet RX despite timing meeting. Use SignalTap/external analyzer capture or a tightly gated debug image instead.
-4. Embedded LiteScope plus the HPI0 source/probe wrapper now prove the FPGA
-   asserts read controls correctly and samples zero internally. The remaining
-   proof point is physical: capture `OTG_DATA[15:0]`, `OTG_ADDR[1:0]`,
-   `OTG_CS_N`, `OTG_RD_N`, `OTG_WR_N`, `OTG_RST_N`, and `OTG_INT/DREQ` with an
-   external analyzer using `local_artifacts\hpi_external_analyzer_channels.csv`
-   to prove whether the CY7C67200 physically drives the pins during reads.
+4. Embedded LiteScope, HPI0 source/probe, and the weak-pullup image now prove
+   the FPGA asserts read controls correctly and that DATA still samples zero
+   even when released FPGA inputs are weakly biased high. Without an external
+   analyzer, move the next debug step to CY reset/clock/HPI mode/boot straps
+   and board-level DATA bus hold causes.
 5. Run the next Beagle capture with a simple known-good low/full-speed USB
    mouse or keyboard connected through the Beagle to the DE2-115 HOST port.
    Terasic's host mouse demo is the preferred comparison image for that test.
