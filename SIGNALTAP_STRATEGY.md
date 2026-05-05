@@ -14,6 +14,32 @@ This project now has enough firmware-side evidence to make the next USB debug st
   produces a SOF where `quartus_stp` reports no `auto_signaltap_0` instance.
   Use HPI0 source/probe or an external analyzer until a real `sld_signaltap`
   node is visible in the reports/SOF.
+- **2026-05-04 HDL SignalTap result:** An explicit `sld_signaltap` instance in
+  `cy7c67200_wb_bridge` does instantiate and fit when enabled, and the hidden
+  SLD hub ports must be omitted rather than tied to constants. However, both
+  tested hardware images failed Ethernet bring-up:
+  checksum `0x0340C359` with a nonzero node id, and checksum `0x033C790F`
+  with the default node id. The validated SOF was restored afterward and ping
+  recovered. The HDL block is now guarded by `HPI_PIN_SIGNALTAP` so normal
+  builds stay on the Ethernet-safe path.
+- **2026-05-04 default-image recovery:** After guarding the HDL SignalTap block
+  and removing QSF SignalTap assignments, the default root image compiled and
+  programmed as checksum `0x033328D9`. Ethernet passed 50/50 ping plus 512 CSR
+  loops after the gate was corrected to stress `lcd_out`; `leds_r_out` is not a
+  valid sustained oracle because USB diagnostic idle firmware writes it as a
+  heartbeat.
+- **Working HPI capture wrapper:** `scripts\capture_hpi_source_probe.ps1` arms
+  HPI0 source/probe mode `1`, triggers a DATA read through
+  `scripts\hpi_capture_combined.py`, and decodes the captured 192-bit probe into
+  `local_artifacts\hpi_source_probe_capture.txt`.
+- **External analyzer cycle generator:** `scripts\hpi_cycle_loop.py` repeats
+  HPI cycles over Etherbone on the Ethernet-safe image. Use
+  `python scripts\hpi_cycle_loop.py --start-server --port 1235 --mode rw --count 0 --period-ms 100 --reset`
+  while triggering the analyzer on `OTG_RD_N` falling or `OTG_CS_N` low.
+- **One-command capture wrapper:** `scripts\run_hpi_external_capture_loop.ps1`
+  runs the capture loop with optional Ethernet preflight and logs output. Use
+  `powershell -ExecutionPolicy Bypass -File .\scripts\run_hpi_external_capture_loop.ps1`
+  for the default continuous DATA write/read loop.
 
 ## Debug Priorities
 
@@ -51,7 +77,9 @@ Interpretation:
   shifts priority to cable/orientation/hub/connector/PHY/power validation before
   adding more SignalTap around higher-level USB firmware.
 
-SignalTap should capture external pads, not only internal bridge state.
+SignalTap should capture external pads, not only internal bridge state, but it
+must first pass the Ethernet gate. Until then, external logic analyzer capture
+or HPI0 source/probe is the safer route.
 
 Signals:
 

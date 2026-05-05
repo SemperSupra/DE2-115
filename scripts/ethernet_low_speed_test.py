@@ -43,21 +43,29 @@ def etherbone_smoke(args):
         print(f"IDENT_PREFIX {ident!r}")
 
         before_g = wb.regs.leds_g_out.read()
-        before_r = wb.regs.leds_r_out.read()
-        # Firmware owns the green LEDs as a heartbeat, so use them only as a
-        # best-effort access probe. Red LEDs are stable for sustained CSR stress.
+        # Firmware owns the green and red LEDs as heartbeats in USB diagnostic
+        # idle, so use green only as a best-effort access probe and stress a
+        # firmware-stable display CSR instead.
         wb.regs.leds_g_out.write(0x5A)
         probe_g = wb.regs.leds_g_out.read()
+        stress_reg_name = "lcd_out" if hasattr(wb.regs, "lcd_out") else "hex7_out"
+        stress_reg = getattr(wb.regs, stress_reg_name)
+        stress_mask = 0x7FF if stress_reg_name == "lcd_out" else 0x7F
+        before_stress = stress_reg.read()
         for i in range(args.csr_loops):
-            r = (0xA55A ^ (i * 0x1111)) & 0xFFFF
-            wb.regs.leds_r_out.write(r)
-            got_r = wb.regs.leds_r_out.read()
-            if got_r != r:
-                raise RuntimeError(f"CSR mismatch loop={i} leds_r 0x{got_r:x}/0x{r:x}")
+            value = (0x5A5 ^ (i * 0x111)) & stress_mask
+            stress_reg.write(value)
+            got = stress_reg.read() & stress_mask
+            if got != value:
+                raise RuntimeError(
+                    f"CSR mismatch loop={i} {stress_reg_name} 0x{got:x}/0x{value:x}"
+                )
+        stress_reg.write(before_stress)
         print(
             f"ETHERBONE_CSR_STRESS_OK loops={args.csr_loops} "
+            f"stress={stress_reg_name} "
             f"leds_g_start=0x{before_g:08x} leds_g_probe=0x{probe_g:08x} "
-            f"leds_r_start=0x{before_r:08x}"
+            f"{stress_reg_name}_start=0x{before_stress:08x}"
         )
     finally:
         wb.close()

@@ -1,10 +1,147 @@
 # DE2-115 Handoff - Status Update
 
-Date: 2026-04-27
+Date: 2026-05-04
 Workspace: `C:\Users\Mark\Projects\DE2-115`
 
 ## Executive Status
 
+- **2026-05-03 USB resume note:** A patched USB diagnostic image was built to
+  continue past the invalid `HPI_ADDRESS` readback loopback and expose
+  `hpi_data_oe` in the HPI debug probe path. Firmware/SoC/Quartus builds
+  completed and the image programmed, but it failed the Ethernet acceptance
+  gate (`192.168.178.50` unreachable; `litex_server` never became ready).
+  UART during boot still showed HPI reads returning zero:
+  `CY_STAGE2_REG_READ_FAIL`, `CY_STAGE3_RAM_RW_FAIL`, `SIE1_INIT NOACK`.
+  The tracked validation image
+  `validation_images/de2_115_vga_platform_eth10_switchfix_validated_20260427.sof`
+  was reprogrammed afterward and passed 50/50 ping plus 512 CSR loops, so the
+  board is back on the known-good Ethernet baseline.
+- **2026-05-03 follow-up isolation:** Firmware now has a default USB
+  diagnostic-idle path: after an HPI failure it logs the debug registers and
+  enters `USB_DIAG_IDLE` without running the host SIE path. The fresh image
+  checksum `0x03364B4E` still failed the Ethernet gate, while UART confirmed
+  `ETHDBG boot inband=00000004`, `CY_STAGE2_REG_READ_FAIL`, and
+  `USB_DIAG_IDLE`. This isolates the current Ethernet regression to the new
+  generated image/RTL build delta, not to SIE polling. The board was restored
+  again to validated checksum `0x033C9E9A`, which passed 50/50 ping and 512
+  CSR loops.
+- **2026-05-03 Ethernet-only isolation:** A stricter build with
+  `DE2_USB_SKIP_DIAG=1` never touches the CY7C67200 HPI path. That fresh
+  checksum `0x0336F036` still failed Ethernet (`Destination host unreachable`;
+  `litex_server` connection refused), while UART confirmed
+  `ETHDBG boot inband=00000000`, `USB_DIAG_SKIPPED`, and `USB_DIAG_IDLE`.
+  The board was restored to the validated checksum `0x033C9E9A` and again
+  passed 50/50 ping plus 512 CSR loops. USB work is currently gated on
+  recovering a fresh-generated Ethernet baseline.
+- **2026-05-03 strap-isolation result:** Restoring `force_hpi_boot` to the
+  validated source setting (`0`, board straps own CY boot selection) did not
+  recover the fresh Ethernet-only build. The generated SOF checksum remained
+  `0x0336F036` and ping still timed out. The board was restored again to
+  checksum `0x033C9E9A`, which passed 50/50 ping and 512 CSR loops.
+- **2026-05-03 reproducibility check:** A clean temporary worktree at commit
+  `f8e6b9b` was rebuilt in `C:\tmp\de2_eth_baseline_f8e6b9b`. Quartus produced
+  checksum `0x033C9E9A` again, and that freshly rebuilt SOF passed 50/50 ping
+  plus 512 CSR loops. The current blocker is therefore source drift after the
+  validated commit, not an unreproducible Quartus/toolchain result.
+- **2026-05-03 drift split result:** Firmware-only drift on top of clean
+  `f8e6b9b` passed Ethernet with checksum `0x03374149`, so the modular USB
+  firmware and `DE2_USB_SKIP_DIAG=1` idle path are not the regression source.
+  Adding both current HPI bridge RTL changes failed Ethernet with checksum
+  `0x0334614A`. Restoring the interrupt route to `hpi_int0` while keeping the
+  extra `last_ctrl` debug bits also failed with checksum `0x0335BC98`.
+  Keeping only the USB interrupt route change (`.HPI_INT(hpi_int1)`) and
+  restoring the `last_ctrl` tail to zeros passed 50/50 ping plus 512 CSR loops
+  with checksum `0x033328D9`. Source now keeps INT1 and removes the fragile
+  passive debug-bit exposure.
+- **2026-05-03 main-workspace rebuild result:** The earlier root SOF checksum
+  `0x033C59C8` failed because the main platform still mapped USB interrupts as
+  `int0=A6`, `int1=D5`, while the passing split-test image used `int0=D5`,
+  `int1=E5`. After restoring the platform mapping to `D5/E5`, the main
+  workspace rebuilt and programmed as checksum `0x033328D9`. It passed 50/50
+  ping plus 512 CSR loops. Root builds are trusted again with the current safe
+  USB bridge state.
+- **2026-05-03 USB HPI ladder result on recovered root image:** Host HPI diag
+  runs over Etherbone on checksum `0x033328D9`. Writes are still visible at the
+  FPGA/CY HPI data path (`HPI_HOST_AFTER_WRITE ... sample=0x1234 cy=0x1234`),
+  but normal HPI reads still return `0x0000` (`HPI_MEM_RW_FAIL`). A sample
+  offset sweep `0..12` and access-cycle sweep `4..63` did not recover normal
+  reads. The swapped A1/A0 probe returned `0x0011` for most sample/access
+  settings, but status/mailbox and normal data reads remain zero.
+- **2026-05-03 HPI0 source/probe snapshot:** `quartus_stp` on HPI0 mode `3`
+  captured `probe_data=42FCCFF319C41E801A0D00000000FFFF0000FFFFFFFF4240` after
+  the timing sweep. Decoded highlights: `cy_o_int=1`, `hpi_int0=1`,
+  `hpi_int1=1`, `hpi_dreq=0`, `hpi_rst_n=1`, bus idle strobes high
+  (`hpi_cs_n=hpi_rd_n=hpi_wr_n=1`), `sample_data=0xffff`, `cy_o_data=0xffff`,
+  `hpi_data=0xffff`, but `read_data=0x0000`. This supports the current boundary:
+  bus idle/released can be high, but completed HPI reads still latch zero.
+- **2026-05-03 HPI0 DATA-read source/probe capture:** Added
+  `scripts\capture_hpi_source_probe.ps1`, which arms HPI0 mode `1`, triggers
+  the CY RAM write/read transaction, and decodes the captured probe into
+  `local_artifacts\hpi_source_probe_capture.txt`. Captured DATA-read highlights:
+  `captured=1`, `match=1`, `hpi_access=1`, `hpi_rst_n=1`, `hpi_cs_n=0`,
+  `hpi_rd_n=0`, `hpi_wr_n=1`, `hpi_addr=0`, `latched_we=0`, `count=8`,
+  `sample_data=0x0000`, `cy_o_data=0x0000`, and `hpi_data=0x0000`.
+- **2026-05-03 LiteScope read-cycle capture:** Updated
+  `scripts/hpi_capture_combined.py` to the current HPI register map and captured
+  `local_artifacts/hpi_read_capture.vcd` from the recovered root image. The
+  capture triggered on `usb_otg_rd_n` falling during a DATA read after writing
+  address `0x1000` and data `0x1234`; host readback remained `0x0000`. Decoded
+  read-window evidence shows `CS_N=0`, `RD_N=0`, `WR_N=1`, `HPI_ADDR=0`,
+  `HPI_RST_N=1`, `latched_we=0`, and `hpi_data/cy_o_data/sample_data/read_data`
+  all `0x0000` during the active read. This proves the FPGA is issuing a read
+  and not driving write data in that window; the remaining question is why the
+  CY7C67200 is not driving nonzero read data for DATA/MAILBOX/STATUS accesses.
+- **2026-05-04 SignalTap instantiation diagnosis:** Quartus accepts
+  `ENABLE_SIGNALTAP ON` and `USE_SIGNALTAP_FILE usb_hpi_min_capture.stp`, but
+  the `.stp` auto-insertion path still produces a hub-only
+  `de2_115_vga_platform.sld`. An explicit HDL `sld_signaltap` in the HPI
+  bridge is recognized, instantiates, and fits when its hidden SLD hub ports are
+  omitted instead of tied to constants. Hardware testing showed that explicit
+  SignalTap variants break Ethernet bring-up despite positive timing:
+  checksum `0x0340C359` with nonzero node id and checksum `0x033C790F` with
+  default node id both returned only `Destination host unreachable`. The board
+  was restored to validated checksum `0x033C9E9A`, and 5/5 ping passed. The HDL
+  SignalTap block is now guarded by `HPI_PIN_SIGNALTAP` so default builds do not
+  accidentally use the Ethernet-breaking analyzer.
+- **2026-05-04 post-SignalTap root recovery:** Rebuilt the default non-SignalTap
+  root image after guarding `sld_signaltap` and stripping stale QSF SignalTap
+  assignments. Quartus full compile passed with positive timing; programmed SOF
+  checksum `0x033328D9`. The first Ethernet gate had 50/50 ping but failed the
+  CSR stress because the test used `leds_r_out`, which `USB_DIAG_IDLE` firmware
+  updates as a heartbeat. `scripts\ethernet_low_speed_test.py` now stresses
+  firmware-stable `lcd_out` instead, and the rerun passed 50/50 ping plus 512
+  CSR loops on checksum `0x033328D9`.
+- **2026-05-04 current HPI ladder rerun:** Host-triggered HPI diagnostic on the
+  programmed checksum `0x033328D9` still shows the same boundary:
+  `HPI_HOST_AFTER_WRITE ... sample=0x1234 cy=0x1234`, but normal DATA read,
+  MAILBOX, and STATUS remain `0x0000`; the swapped A1/A0 probe returns
+  `0x0011`. `scripts\capture_hpi_source_probe.ps1` again captured a DATA read
+  with `hpi_access=1`, reset released, `CS_N=0`, `RD_N=0`, `WR_N=1`,
+  `ADDR=0`, `count=8`, and `hpi_data/cy_o_data/sample_data/read_data=0x0000`.
+  The `CY7C67200_IF` tri-state condition is `assign HPI_DATA = HPI_WR_N ?
+  16'hzzzz : tmp_data`; because the captured read window has `HPI_WR_N=1`, the
+  FPGA should be releasing the bus. The remaining proof point is still physical
+  pad capture of whether the CY drives `OTG_DATA[15:0]` during reads.
+- **2026-05-04 analyzer loop tool:** Added `scripts\hpi_cycle_loop.py` to
+  repeat HPI read/write cycles from the host without changing the bitstream.
+  Smoke test on checksum `0x033328D9` passed as a tool run and reproduced the
+  failure:
+  `python scripts\hpi_cycle_loop.py --start-server --port 1235 --mode rw --count 3 --period-ms 50 --reset`
+  emitted three `HPI_LOOP_RW` cycles with `read=0x0000`, `sample=0x0000`,
+  `cy=0x0000`, `ctrl=0x03200800`. For external capture, run the same command
+  with `--count 0 --period-ms 100` and trigger on `OTG_RD_N` falling or
+  `OTG_CS_N` low.
+- **2026-05-04 capture-loop automation:** Added
+  `scripts\run_hpi_external_capture_loop.ps1`, a one-command wrapper that can
+  run a quick Ethernet gate, print analyzer trigger/pin guidance, start the
+  repeated HPI loop, and tee output to `local_artifacts`. Smoke test:
+  `powershell -ExecutionPolicy Bypass -File .\scripts\run_hpi_external_capture_loop.ps1 -SkipEthernetGate -Count 2 -PeriodMs 50`
+  completed and logged two `HPI_LOOP_RW` cycles with zero readback.
+- **2026-05-03 tool note:** `scripts/build_soc.sh` now stages generated
+  Quartus host inputs (`.qsf`, `.sdc`, top Verilog, VexRiscv, init files) into
+  the repo root. `scripts/load_bitstream.ps1` now selects the newest candidate
+  `.sof` from root/build paths; previously it silently programmed a stale
+  `build/.../gateware` SOF while the fresh Quartus output was at repo root.
 - **UART:** Working on COM3 at 115200 baud and used for all current board diagnostics.
 - **VGA:** Working and stable enough for bring-up.
 - **Ethernet:** Port 1 is now working in forced-MII low-speed mode. AUTO10/100, 100-only, and 10-only variants each passed 50/50 ping to `192.168.178.50` plus 512 Etherbone red-LED CSR write/read loops through `litex_server` on host TCP port `1235`. The current 10-only image also passed a longer 200/200 ping plus 4096 red-LED CSR loop regression.
@@ -23,9 +160,13 @@ Workspace: `C:\Users\Mark\Projects\DE2-115`
 - **Board-wide device plan:** `DEVICE_STATUS_AND_BRINGUP.md` records the
   status of each DE2-115 device and the staged strategy for remaining bring-up.
 - **USB HPI:** The FPGA-side HPI bridge now decodes the USB window correctly, uses Terasic-style registered HPI control/data timing, and successfully drives write data onto the bus. The CY7C67200 still returns `0x0000` on all read attempts, including basic control registers and memory readback, so LCP/BIOS ACK still fails. Etherbone-driven reset and HPI sample-offset sweeps also returned only zeroes.
-- **Current programmed board image:** Corrected 10 Mbps Ethernet validation
-  image, checksum `0x033C9E9A`. It passed 50/50 ping, 512 Etherbone CSR loops,
-  and board GPIO smoke test with `SWITCHES 0x00000000`.
+- **Current programmed board image:** Temporary split-test image from
+  the main workspace root, checksum `0x033328D9`, with current firmware,
+  `.HPI_INT(hpi_int1)`, `last_ctrl` debug tail restored to zeros, and USB
+  interrupt pins mapped as `int0=D5`, `int1=E5`. It passed the latest 50/50
+  ping and 512 Etherbone CSR loop gate. The tracked fallback validation SOF remains
+  `validation_images/de2_115_vga_platform_eth10_switchfix_validated_20260427.sof`
+  checksum `0x033C9E9A`.
 
 ## Changes Since Previous Handoff
 
@@ -65,8 +206,12 @@ Workspace: `C:\Users\Mark\Projects\DE2-115`
 - Added `scripts/decode_hpi_probe.py` to decode the 192-bit `HPI0`
   source/probe value.
 - Normalized `signaltap/usb_hpi_capture.stp` log/display names to `log_1` /
-  `signal_set_1`; Quartus still compiles only the SLD hub/fabric and
-  `quartus_stp` reports no `auto_signaltap_0` instance in the SOF.
+  `signal_set_1` and added `scripts\capture_hpi_pins.ps1`. Rebuilding and
+  programming the attempted SignalTap image reproduced the known limitation:
+  Quartus still includes only the SLD hub/fabric, and `quartus_stp` reports no
+  `auto_signaltap_0` instance in the programmed SOF.
+  `scripts\capture_hpi_source_probe.ps1` is the working repeatable HPI capture
+  path until a true pin-level SignalTap node or external analyzer is available.
 
 ## Latest Verified Board Log
 
@@ -234,25 +379,31 @@ python scripts\visual_board_selftest.py --start-server --port 1238 --camera 1 --
 
 ## Remaining Work
 
-1. Keep `scripts/ethernet_low_speed_test.py` as the acceptance gate before/after USB changes. Current programmed image is the tracked corrected 10-only validation image, checksum `0x033C9E9A`, and includes the switch pin-map fix.
-2. Do not trust USB debug builds until they pass the Ethernet low-speed gate. A deterministic HPI0-trigger RTL experiment changed placement enough to break Ethernet RX despite timing meeting, so preserve the validated image before further compile experiments.
-3. Capture external USB HPI pins with a working SignalTap instance or an external logic analyzer during the read cycle: `OTG_DATA[15:0]`, `OTG_ADDR[1:0]`, `OTG_CS_N`, `OTG_RD_N`, `OTG_WR_N`, `OTG_RST_N`, and `OTG_INT`. The current `.stp` file is not embedding a usable capture instance.
-4. Run the next Beagle capture with a simple known-good low/full-speed USB
+1. Keep `scripts/ethernet_low_speed_test.py` as the acceptance gate before/after USB changes. The current programmed root image is checksum `0x033328D9`; the tracked corrected 10-only validation fallback remains checksum `0x033C9E9A`.
+2. The next USB ladder step can use the current root image. Capture HPI/USB evidence with `.HPI_INT(hpi_int1)`, `last_ctrl` debug tail zeros, and USB interrupt pins `int0=D5`, `int1=E5`.
+3. Do not add passive bridge status bits into `last_ctrl` for routine USB debug. The split test showed that exposing `hpi_int0`, `hpi_int1`, `hpi_dreq`, and `diag_in` there can break Ethernet RX despite timing meeting. Use SignalTap/external analyzer capture or a tightly gated debug image instead.
+4. Embedded LiteScope plus the HPI0 source/probe wrapper now prove the FPGA
+   asserts read controls correctly and samples zero internally. The remaining
+   proof point is physical: capture `OTG_DATA[15:0]`, `OTG_ADDR[1:0]`,
+   `OTG_CS_N`, `OTG_RD_N`, `OTG_WR_N`, `OTG_RST_N`, and `OTG_INT/DREQ` with an
+   external analyzer or a working pin-level SignalTap instance to prove whether
+   the CY7C67200 physically drives the pins during reads.
+5. Run the next Beagle capture with a simple known-good low/full-speed USB
    mouse or keyboard connected through the Beagle to the DE2-115 HOST port.
    Terasic's host mouse demo is the preferred comparison image for that test.
    If that also shows only connect/disconnect/reset and no packets, debug the
    DE2 host-port hardware/cabling/power/CY reset-clock path before more HID
    class work.
-5. Before more LiteX USB firmware work, resolve the device-path `BAD_SYNC`
+6. Before more LiteX USB firmware work, resolve the device-path `BAD_SYNC`
    symptom with Terasic's device demo: verify Beagle cable orientation, try a
    short known-good USB 2.0 Type-B cable, try direct PC port versus hub, and
    inspect the DE2 USB power/PHY/connector path. A working Terasic device demo
    is the fastest proof that the CY7C67200 physical path is sane.
-6. Once USB readback works, resume LCP load verification and mailbox ACK flow.
-7. Keep gigabit Ethernet deferred in the backlog; later add a separate gigabit cleanup task using `ETH0`/`ETX0` captures.
-8. Use `DEVICE_STATUS_AND_BRINGUP.md` as the board-wide backlog. Start SD card
+7. Once USB readback works, resume LCP load verification and mailbox ACK flow.
+8. Keep gigabit Ethernet deferred in the backlog; later add a separate gigabit cleanup task using `ETH0`/`ETX0` captures.
+9. Use `DEVICE_STATUS_AND_BRINGUP.md` as the board-wide backlog. Start SD card
    bring-up after USB is unblocked enough to avoid losing the hardware-debug
    thread.
-9. To fully validate independent transitions for all 18 switches, manually walk
+10. To fully validate independent transitions for all 18 switches, manually walk
    each switch and record the `switches_in` CSR value. Current evidence
    validates the all-aligned vector `0x00000000` after correcting the pin map.
