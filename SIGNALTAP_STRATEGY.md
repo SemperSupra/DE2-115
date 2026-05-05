@@ -67,6 +67,10 @@ This project now has enough firmware-side evidence to make the next USB debug st
   `CS_N=0`, `RD_N=0`, `WR_N=1`, `ADDR=0`, and reset released read
   `hpi_data=0x0000`/`sample_data=0x0000`. DATA, MAILBOX, STATUS, and
   non-authoritative ADDRESS read sweeps all returned `0x0000`.
+- **Reset timing sweep:** `scripts\run_hpi_reset_timing_sweep.ps1` varies
+  reset-low duration, post-release wait, access cycles, and sample offsets
+  while keeping one Etherbone server alive. The 2026-05-05 run completed 108
+  combinations and every DATA/MAILBOX/STATUS read stayed zero.
 
 ## Debug Priorities
 
@@ -102,6 +106,8 @@ Interpretation:
 - With the same weak-pullup image, idle/released and reset-low source/probe
   samples do read `0xffff`. The low value is specific to active HPI read
   cycles, not a general FPGA input or weak-pullup failure.
+- A reset timing sweep through reset-low `0.01..2.0s` and post-release wait
+  `0.1..2.0s` did not produce any nonzero DATA/MAILBOX/STATUS read.
 - USB-line capture sees target presence/reset transitions but no host packets, so the CY is not reaching a functional USB-host state.
 - The DE2 HOST path does not currently reach packet traffic even with the
   Terasic host mouse demo. Before more HID class work, repeat the Beagle test

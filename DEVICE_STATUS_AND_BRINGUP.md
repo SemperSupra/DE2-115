@@ -64,6 +64,13 @@
   reads of DATA, MAILBOX, STATUS, and the non-authoritative ADDRESS port all
   returned `0x0000`. Log:
   `local_artifacts\hpi_no_analyzer_contrast.log`.
+- 2026-05-05 reset timing sweep:
+  `scripts\run_hpi_reset_timing_sweep.ps1` passed a 20/20 ping plus 128 CSR
+  Ethernet gate, then tested 108 reset/timing combinations:
+  reset-low `0.01/0.1/0.5/2.0s`, post-release wait `0.1/0.5/2.0s`,
+  access cycles `10/32/63`, and sample offsets `2/8/16`. DATA, MAILBOX, and
+  STATUS stayed `0x0000` before and after a DATA write in every row
+  (`nonzero=0x0000`). Log: `local_artifacts\hpi_reset_timing_sweep.log`.
 
 ## Critical Findings
 1. CY7C67200 Host port power is supplied via a robust 5V rail, bypassing the internal 10mA charge pump.
@@ -82,7 +89,8 @@
 3. Run the Beagle 12 packet analyzer with a simple known-good low/full-speed
    mouse or keyboard on the DE2-115 HOST path.
 4. Next HPI step without an external analyzer: inspect CY7C67200 reset/clock
-   and HPI boot-mode strap assumptions. The weak-pullup contrast proves the
+   and HPI boot-mode strap assumptions. Longer reset-low and post-release
+   settle windows did not recover reads. The weak-pullup contrast proves the
    FPGA input path reads released DATA high, while active HPI reads drive or
    hold DATA low.
 5. Verify `SOF` (Start of Frame) packet generation.
