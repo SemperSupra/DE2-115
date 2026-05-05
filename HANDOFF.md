@@ -202,6 +202,15 @@ Workspace: `C:\Users\Mark\Projects\DE2-115`
   `local_artifacts\hpi_reset_timing_sweep.log`. The command wrapper hit the
   agent's 180s timeout after the script printed `HPI_RESET_SWEEP_END`, so treat
   the log as the authoritative completed result.
+- **2026-05-05 CY wiring fact check:** Added
+  `docs/CY7C67200_BOARD_WIRING_FACTS.md` from local `de2_manual.pdf`,
+  `bios_manual.pdf`, and `hw_notes.pdf`. The DE2 manual states that the
+  CY7C67200 interface is set to HPI and Figure 4-31 shows CY `XTALIN` fed by a
+  MAX II `EPM240` at `12MHz`, not by Cyclone IV user fabric. The BIOS manual
+  says HPI co-processor boot is selected by `GPIO30=0/GPIO31=0`, while EEPROM
+  stand-alone is `GPIO30=1/GPIO31=1`. The current platform does not expose
+  documented `GPIO30/GPIO31` boot pins, so `force_hpi_boot` remains a stub and
+  should not be treated as a real strap override.
 - **2026-05-03 tool note:** `scripts/build_soc.sh` now stages generated
   Quartus host inputs (`.qsf`, `.sdc`, top Verilog, VexRiscv, init files) into
   the repo root. `scripts/load_bitstream.ps1` now selects the newest candidate
@@ -446,7 +455,7 @@ python scripts\visual_board_selftest.py --start-server --port 1238 --camera 1 --
 ## Remaining Work
 
 1. Keep `scripts/ethernet_low_speed_test.py` as the acceptance gate before/after USB changes. The current programmed image is the weak-pullup diagnostic checksum `0x03332BFF`; the normal root image checksum is `0x033328D9`; the tracked corrected 10-only validation fallback remains checksum `0x033C9E9A`.
-2. The next USB ladder step is CY clock and HPI boot-mode strap validation. `force_hpi_boot` is currently a stub tied to zero; the platform does not expose GPIO30/GPIO31 strap pins, so do not assume the FPGA can force HPI boot without schematic-backed pin additions. Use `scripts\run_hpi_no_analyzer_contrast.ps1` and `scripts\run_hpi_reset_timing_sweep.ps1` to rerun proof after each change.
+2. The next USB ladder step is CY clock and HPI boot-mode strap validation. `force_hpi_boot` is currently a stub tied to zero; the platform does not expose GPIO30/GPIO31 strap pins, and the DE2 manual shows CY `XTALIN` comes from MAX II `EPM240` at `12MHz`, not the Cyclone IV. Do not assume the FPGA can force HPI boot or CY clock without schematic-backed pin additions. Use `scripts\run_hpi_no_analyzer_contrast.ps1` and `scripts\run_hpi_reset_timing_sweep.ps1` to rerun proof after each change.
 3. Do not add passive bridge status bits into `last_ctrl` for routine USB debug. The split test showed that exposing `hpi_int0`, `hpi_int1`, `hpi_dreq`, and `diag_in` there can break Ethernet RX despite timing meeting. Use SignalTap/external analyzer capture or a tightly gated debug image instead.
 4. Embedded LiteScope, HPI0 source/probe, and the weak-pullup contrast now
    prove the FPGA asserts read controls correctly, released/reset-low DATA

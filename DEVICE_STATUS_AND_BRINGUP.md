@@ -71,6 +71,11 @@
   access cycles `10/32/63`, and sample offsets `2/8/16`. DATA, MAILBOX, and
   STATUS stayed `0x0000` before and after a DATA write in every row
   (`nonzero=0x0000`). Log: `local_artifacts\hpi_reset_timing_sweep.log`.
+- 2026-05-05 local wiring fact check: `docs\CY7C67200_BOARD_WIRING_FACTS.md`
+  records that the DE2 manual shows the CY7C67200 HPI interface and a `12MHz`
+  `XTALIN` feed from MAX II `EPM240`. The BIOS manual says HPI co-processor
+  boot requires `GPIO30=0/GPIO31=0`. Those boot pins are not exposed in the
+  current platform, so `force_hpi_boot` is not a real strap override.
 
 ## Critical Findings
 1. CY7C67200 Host port power is supplied via a robust 5V rail, bypassing the internal 10mA charge pump.

@@ -71,6 +71,10 @@ This project now has enough firmware-side evidence to make the next USB debug st
   reset-low duration, post-release wait, access cycles, and sample offsets
   while keeping one Etherbone server alive. The 2026-05-05 run completed 108
   combinations and every DATA/MAILBOX/STATUS read stayed zero.
+- **Board wiring facts:** `docs\CY7C67200_BOARD_WIRING_FACTS.md` records the
+  local manual evidence. DE2-115 Figure 4-31 shows CY `XTALIN` fed by MAX II
+  `EPM240` at `12MHz`; BIOS boot mode uses `GPIO30/GPIO31`; the current FPGA
+  platform does not expose those boot pins.
 
 ## Debug Priorities
 
