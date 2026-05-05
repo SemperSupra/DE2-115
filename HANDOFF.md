@@ -1,6 +1,6 @@
 # DE2-115 Handoff - Status Update
 
-Date: 2026-05-04
+Date: 2026-05-05
 Workspace: `C:\Users\Mark\Projects\DE2-115`
 
 ## Executive Status
@@ -137,6 +137,27 @@ Workspace: `C:\Users\Mark\Projects\DE2-115`
   repeated HPI loop, and tee output to `local_artifacts`. Smoke test:
   `powershell -ExecutionPolicy Bypass -File .\scripts\run_hpi_external_capture_loop.ps1 -SkipEthernetGate -Count 2 -PeriodMs 50`
   completed and logged two `HPI_LOOP_RW` cycles with zero readback.
+- **2026-05-05 capture pin-map automation:** Extended
+  `scripts\run_hpi_external_capture_loop.ps1` to write
+  `local_artifacts\hpi_external_analyzer_channels.csv` and print all analyzer
+  labels with FPGA pins. Smoke test with `-Count 2 -PeriodMs 100` printed the
+  `OTG_DATA[15:0]`, `OTG_ADDR[1:0]`, `OTG_CS_N`, `OTG_RD_N`, `OTG_WR_N`,
+  `OTG_RST_N`, `OTG_INT0`, `OTG_INT1`, and `OTG_DREQ` mapping and again
+  reproduced `read=0x0000`.
+- **2026-05-05 live external-loop/source-probe result:** Started the continuous
+  capture loop with
+  `powershell -ExecutionPolicy Bypass -File .\scripts\run_hpi_external_capture_loop.ps1 -SkipEthernetGate -Count 0 -PeriodMs 100`
+  and live log `local_artifacts\hpi_external_capture_loop_live.log`. The loop
+  advanced past 400k write/read cycles with repeated
+  `HPI_LOOP_RW ... read=0x0000 sample=0x0000 cy=0x0000 ctrl=0x03200800`.
+  While that loop was active, `quartus_stp -t scripts\read_source_probe.tcl HPI0 1 3000 3`
+  selected the HPI0 source/probe instance and captured stable
+  `probe_data=48FC8FF7C9D6823B80000000000000000000000000000000`. Decoded
+  highlights are saved in `local_artifacts\hpi_live_source_probe_capture.txt`:
+  reset released, `CS_N=0`, `RD_N=0`, `WR_N=1`, `ADDR=0`, `captured=1`,
+  `match=1`, and `hpi_data/cy_o_data/sample_data/read_data=0x0000`.
+  This confirms the active loop is generating the intended internal DATA-read
+  condition; the remaining evidence must come from the physical HPI pads.
 - **2026-05-03 tool note:** `scripts/build_soc.sh` now stages generated
   Quartus host inputs (`.qsf`, `.sdc`, top Verilog, VexRiscv, init files) into
   the repo root. `scripts/load_bitstream.ps1` now selects the newest candidate
@@ -386,8 +407,8 @@ python scripts\visual_board_selftest.py --start-server --port 1238 --camera 1 --
    asserts read controls correctly and samples zero internally. The remaining
    proof point is physical: capture `OTG_DATA[15:0]`, `OTG_ADDR[1:0]`,
    `OTG_CS_N`, `OTG_RD_N`, `OTG_WR_N`, `OTG_RST_N`, and `OTG_INT/DREQ` with an
-   external analyzer or a working pin-level SignalTap instance to prove whether
-   the CY7C67200 physically drives the pins during reads.
+   external analyzer using `local_artifacts\hpi_external_analyzer_channels.csv`
+   to prove whether the CY7C67200 physically drives the pins during reads.
 5. Run the next Beagle capture with a simple known-good low/full-speed USB
    mouse or keyboard connected through the Beagle to the DE2-115 HOST port.
    Terasic's host mouse demo is the preferred comparison image for that test.

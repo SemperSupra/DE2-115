@@ -39,7 +39,15 @@ This project now has enough firmware-side evidence to make the next USB debug st
 - **One-command capture wrapper:** `scripts\run_hpi_external_capture_loop.ps1`
   runs the capture loop with optional Ethernet preflight and logs output. Use
   `powershell -ExecutionPolicy Bypass -File .\scripts\run_hpi_external_capture_loop.ps1`
-  for the default continuous DATA write/read loop.
+  for the default continuous DATA write/read loop. The wrapper also writes
+  `local_artifacts\hpi_external_analyzer_channels.csv` with the external
+  analyzer signal labels and FPGA pins.
+- **2026-05-05 live-loop internal reference:** While the continuous wrapper loop
+  was running, HPI0 source/probe mode `1` captured
+  `48FC8FF7C9D6823B80000000000000000000000000000000`, decoded in
+  `local_artifacts\hpi_live_source_probe_capture.txt` as reset released,
+  `CS_N=0`, `RD_N=0`, `WR_N=1`, `ADDR=0`, and all data fields `0x0000`.
+  Use this as the internal reference for the external analyzer capture.
 
 ## Debug Priorities
 
@@ -51,6 +59,7 @@ Current evidence:
 HPI DBG WR ... sample=00001234 cy=00001234
 HPI DBG RD ... sample=00000000 cy=00000000
 HPI0 read_data: rst=0 hpi_rst_n=1 cs_n=0 rd_n=0 wr_n=1 addr=0 data=0000
+HPI0 live-loop probe: 48FC8FF7C9D6823B80000000000000000000000000000000
 Beagle USB 12: on the DE2 HOST path with KVM2USB inline, active captures on the
 project image and Terasic host mouse demo show repeated connect/disconnect/reset,
 but no SOF/SETUP/IN/OUT packets. On the PC hub reference path, KVM2USB

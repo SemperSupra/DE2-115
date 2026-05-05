@@ -1,4 +1,4 @@
-# USB Host Bring-Up Status (2026-05-04)
+# USB Host Bring-Up Status (2026-05-05)
 
 ## Current Status
 - USB Host port powered: Yes (4.99V)
@@ -26,7 +26,16 @@
   repeated write/read cycles and reproduced `read=0x0000`.
 - `scripts\run_hpi_external_capture_loop.ps1` wraps the cycle stream for
   capture use. It optionally runs a quick Ethernet gate, prints analyzer trigger
-  guidance, starts the loop, and logs output under `local_artifacts`.
+  guidance, writes `local_artifacts\hpi_external_analyzer_channels.csv`, starts
+  the loop, and logs output under `local_artifacts`.
+- 2026-05-05 live capture loop is running under
+  `local_artifacts\hpi_external_capture_loop_live.log`; it has advanced past
+  400k repeated cycles and still reports `read=0x0000`, `sample=0x0000`,
+  `cy=0x0000`, `ctrl=0x03200800`. A simultaneous HPI0 source/probe snapshot
+  saved in `local_artifacts\hpi_live_source_probe_capture.txt` captured
+  `probe_data=48FC8FF7C9D6823B80000000000000000000000000000000`, decoded as
+  `CS_N=0`, `RD_N=0`, `WR_N=1`, `ADDR=0`, reset released, and all data fields
+  still `0x0000`.
 - SignalTap diagnosis: QSF `USE_SIGNALTAP_FILE` is recognized by Quartus, but
   `.stp` auto insertion still emits a hub-only `.sld`. Explicit HDL
   `sld_signaltap` does instantiate and fit, but the tested images fail Ethernet
@@ -44,9 +53,9 @@
    before trusting any USB evidence.
 3. Run the Beagle 12 packet analyzer with a simple known-good low/full-speed
    mouse or keyboard on the DE2-115 HOST path.
-4. Capture HPI read-cycle pins with an external logic analyzer, or retry
-   SignalTap only after isolating it from the Ethernet path. The `.stp` auto
-   path is hub-only; explicit HDL SignalTap fits but currently breaks Ethernet
-   on hardware.
+4. Capture HPI read-cycle pins with an external logic analyzer using
+   `local_artifacts\hpi_external_analyzer_channels.csv` for labels/pins and
+   trigger on `OTG_RD_N` falling or `OTG_CS_N` low. The internal reference for
+   that capture is `local_artifacts\hpi_live_source_probe_capture.txt`.
 5. Verify `SOF` (Start of Frame) packet generation.
 6. If enumeration stalls, compare descriptor packets with Terasic Host Demo packet logs to isolate firmware-level USB protocol issues.
