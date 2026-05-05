@@ -226,6 +226,16 @@ Workspace: `C:\Users\Mark\Projects\DE2-115`
   `0x0000`. This confirms the FPGA drives MAILBOX writes correctly and the
   source/probe can catch the write window, but it does not show CY firmware/BIOS
   response to the mailbox command.
+- **2026-05-05 reset-release sideband timeline:** Added
+  `scripts\run_hpi_reset_release_sideband_timeline.ps1` to automate a
+  no-analyzer reset/sideband probe. Rerun:
+  `powershell -ExecutionPolicy Bypass -File .\scripts\run_hpi_reset_release_sideband_timeline.ps1 -Log local_artifacts\hpi_reset_release_sideband_timeline.log -SkipEthernetGate -DelaysMs 0,100,500,1000,2000`.
+  Reset-low HPI0 decoded as `hpi_rst_n=0`, `INT0=0`, `INT1=1`, `DREQ=0`, and
+  idle DATA high. After release, the coarse samples at
+  `0/100/500/1000/2000ms` decoded as `hpi_rst_n=1`, `INT0=1`, `INT1=1`,
+  `DREQ=0`, and idle DATA high. This proves the FPGA reset control has an
+  observable CY-side effect, but it did not reveal post-release interrupt/DREQ
+  activity that would imply a responsive HPI BIOS path.
 - **2026-05-03 tool note:** `scripts/build_soc.sh` now stages generated
   Quartus host inputs (`.qsf`, `.sdc`, top Verilog, VexRiscv, init files) into
   the repo root. `scripts/load_bitstream.ps1` now selects the newest candidate
@@ -477,8 +487,8 @@ python scripts\visual_board_selftest.py --start-server --port 1238 --camera 1 --
    drives write data correctly, released/reset-low DATA reads high, and only
    active HPI read cycles sample zero. Without an external analyzer, move the
    next debug step to CY clock/HPI mode/boot straps and board-level DATA bus
-   hold causes. Reset timing and confirmed mailbox writes did not recover
-   readable CY STATUS/MAILBOX/DATA.
+   hold causes. Reset timing, confirmed mailbox writes, and reset-release
+   sideband sampling did not recover readable CY STATUS/MAILBOX/DATA.
 5. Run the next Beagle capture with a simple known-good low/full-speed USB
    mouse or keyboard connected through the Beagle to the DE2-115 HOST port.
    Terasic's host mouse demo is the preferred comparison image for that test.

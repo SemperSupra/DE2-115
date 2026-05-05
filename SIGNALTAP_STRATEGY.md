@@ -82,6 +82,11 @@ This project now has enough firmware-side evidence to make the next USB debug st
   `0xfa50` with `CS_N=0`, `WR_N=0`, `RD_N=1`, `ADDR=1`, and all write data
   views equal to `0xfa50`. STATUS/MAILBOX reads after the write still returned
   zero and sidebands stayed idle (`INT0=1`, `INT1=1`, `DREQ=0`).
+- **Reset-release sideband timeline:**
+  `scripts\run_hpi_reset_release_sideband_timeline.ps1` samples HPI0 idle
+  state while reset is low and after release. The first run showed reset-low
+  `INT0=0`, `INT1=1`, `DREQ=0`; released samples through 2 seconds showed
+  `INT0=1`, `INT1=1`, `DREQ=0`. Use it after any reset/boot-mode change.
 
 ## Debug Priorities
 
@@ -112,6 +117,8 @@ Interpretation:
 - FPGA MAILBOX write drive is also working; HPI0 source/probe captured an
   intentional `0xfa50` write on `ADDR=1` with the expected active write
   strobes.
+- FPGA reset control has an observable sideband effect: `INT0` is low while
+  reset is asserted and returns high after release.
 - FPGA HPI read cycle is being issued.
 - The CY7C67200 is not returning nonzero data at the FPGA pad sample point. An Etherbone reset/sample sweep from 0 to 60 cycles also returned only zeroes, so a simple sample-offset change is unlikely to fix it.
 - With FPGA weak pull-ups enabled on `OTG_DATA[15:0]`, DATA reads still sample

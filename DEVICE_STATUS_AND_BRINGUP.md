@@ -87,6 +87,15 @@
   `INT0=1`, `INT1=1`, `DREQ=0`. This proves the FPGA write-window drive and
   HPI0 capture path are working, but it does not prove the CY BIOS is
   processing mailbox commands.
+- 2026-05-05 reset-release sideband timeline:
+  `scripts\run_hpi_reset_release_sideband_timeline.ps1` samples HPI0 idle
+  sidebands after asserting and releasing CY reset. Rerun log
+  `local_artifacts\hpi_reset_release_sideband_timeline.log` showed reset-low
+  with `hpi_rst_n=0`, `INT0=0`, `INT1=1`, `DREQ=0`, and idle DATA high. After
+  reset release, coarse samples at `0/100/500/1000/2000ms` all showed
+  `hpi_rst_n=1`, `INT0=1`, `INT1=1`, `DREQ=0`, and idle DATA high. This proves
+  the reset control has observable CY-side effect, but it did not reveal any
+  sideband boot/mailbox activity after release.
 
 ## Critical Findings
 1. CY7C67200 Host port power is supplied via a robust 5V rail, bypassing the internal 10mA charge pump.
@@ -107,8 +116,9 @@
 4. Next HPI step without an external analyzer: inspect CY7C67200 reset/clock
    and HPI boot-mode strap assumptions. Longer reset-low and post-release
    settle windows did not recover reads, and mailbox writes are now proven at
-   the pins without producing readable STATUS/MAILBOX response. The
-   weak-pullup contrast proves the FPGA input path reads released DATA high,
-   while active HPI reads drive or hold DATA low.
+   the pins without producing readable STATUS/MAILBOX response. Reset-release
+   sideband sampling shows reset affects `INT0`, but no post-release sideband
+   activity appears. The weak-pullup contrast proves the FPGA input path reads
+   released DATA high, while active HPI reads drive or hold DATA low.
 5. Verify `SOF` (Start of Frame) packet generation.
 6. If enumeration stalls, compare descriptor packets with Terasic Host Demo packet logs to isolate firmware-level USB protocol issues.
