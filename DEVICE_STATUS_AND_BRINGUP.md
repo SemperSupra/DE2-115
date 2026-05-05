@@ -54,21 +54,36 @@
   CSR loops. Eight HPI DATA write/read cycles still returned
   `read=0x0000`, `sample=0x0000`, `cy=0x0000`, `ctrl=0x03200800`, so the bus
   is not merely floating low with the FPGA input released.
+- 2026-05-05 no-analyzer contrast run:
+  `scripts\run_hpi_no_analyzer_contrast.ps1` passed a 20/20 ping plus 128 CSR
+  Ethernet gate, then captured the weak-pullup split. Idle/released HPI0 showed
+  `hpi_data=0xffff`, `cy_o_data=0xffff`, `sample_data=0xffff`; reset-low HPI0
+  showed `hpi_rst_n=0`, `hpi_data=0xffff`, `sample_data=0xffff`; active DATA
+  read showed `CS_N=0`, `RD_N=0`, `WR_N=1`, `ADDR=0`, `hpi_rst_n=1`, but
+  `hpi_data=0x0000`, `cy_o_data=0x0000`, `sample_data=0x0000`. Sequential
+  reads of DATA, MAILBOX, STATUS, and the non-authoritative ADDRESS port all
+  returned `0x0000`. Log:
+  `local_artifacts\hpi_no_analyzer_contrast.log`.
 
 ## Critical Findings
 1. CY7C67200 Host port power is supplied via a robust 5V rail, bypassing the internal 10mA charge pump.
 2. `HPI_ADDRESS` (offset `0x008`) is a Write-Only register. Reading it always returns `0x0000`.
 3. The previous "Uninitialized Host" error was caused by the firmware halting during a faulty HPI loopback probe, not by a physical hardware failure.
+4. HPI is not globally write-only. Only the `HPI_ADDRESS` logical port is
+   write-only; DATA, MAILBOX, and STATUS should support reads, but the current
+   board state returns `0x0000` for all active HPI reads.
 
 ## Recommended Next Steps
-1. Use the current root INT1-only image for the immediate USB capture path.
+1. Reprogram the normal root INT1-only image (`0x033328D9`) before returning
+   to USB packet capture; the board is currently on the weak-pullup diagnostic
+   image (`0x03332BFF`).
 2. Run `scripts\ethernet_low_speed_test.py --ping-count 50 --csr-loops 512 --bind-port 1235`
    before trusting any USB evidence.
 3. Run the Beagle 12 packet analyzer with a simple known-good low/full-speed
    mouse or keyboard on the DE2-115 HOST path.
-4. Next HPI step without an external analyzer: use the weak-pullup result to
-   focus on CY7C67200 reset/clock/HPI-mode/boot-strapping and board-level DATA
-   bus holds. The FPGA weak-pullup image proved the read bus stays low even
-   when the FPGA biases released DATA pins high.
+4. Next HPI step without an external analyzer: inspect CY7C67200 reset/clock
+   and HPI boot-mode strap assumptions. The weak-pullup contrast proves the
+   FPGA input path reads released DATA high, while active HPI reads drive or
+   hold DATA low.
 5. Verify `SOF` (Start of Frame) packet generation.
 6. If enumeration stalls, compare descriptor packets with Terasic Host Demo packet logs to isolate firmware-level USB protocol issues.

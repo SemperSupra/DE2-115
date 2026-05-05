@@ -177,6 +177,19 @@ Workspace: `C:\Users\Mark\Projects\DE2-115`
   at the FPGA input; with weak pull-ups enabled, released lines should have
   sampled high. The next debug target is why the CY/board path is holding DATA
   low or not entering a readable HPI state.
+- **2026-05-05 no-analyzer contrast result:** Added
+  `scripts\hpi_set_reset.py` and `scripts\run_hpi_no_analyzer_contrast.ps1`.
+  The contrast wrapper passed a 20/20 ping plus 128 `lcd_out` CSR Ethernet
+  gate, captured idle/released and reset-low HPI0 source/probe, swept the HPI
+  logical ports sequentially, and captured an active DATA read. The important
+  split is now explicit: idle/released HPI0 reads
+  `hpi_data=0xffff`, `cy_o_data=0xffff`, `sample_data=0xffff`; reset-low reads
+  `hpi_rst_n=0`, `hpi_data=0xffff`, `sample_data=0xffff`; active DATA read has
+  `CS_N=0`, `RD_N=0`, `WR_N=1`, `ADDR=0`, `hpi_rst_n=1`, but
+  `hpi_data/cy_o_data/sample_data/read_data=0x0000`. Sequential DATA, MAILBOX,
+  STATUS, and non-authoritative ADDRESS reads each returned `0x0000`. Log:
+  `local_artifacts\hpi_no_analyzer_contrast.log`; active VCD:
+  `local_artifacts\hpi_no_analyzer_active_read_capture.vcd`.
 - **2026-05-03 tool note:** `scripts/build_soc.sh` now stages generated
   Quartus host inputs (`.qsf`, `.sdc`, top Verilog, VexRiscv, init files) into
   the repo root. `scripts/load_bitstream.ps1` now selects the newest candidate
@@ -199,12 +212,13 @@ Workspace: `C:\Users\Mark\Projects\DE2-115`
   regression rule in one place.
 - **Board-wide device plan:** `DEVICE_STATUS_AND_BRINGUP.md` records the
   status of each DE2-115 device and the staged strategy for remaining bring-up.
-- **USB HPI:** The FPGA-side HPI bridge now decodes the USB window correctly, uses Terasic-style registered HPI control/data timing, and successfully drives write data onto the bus. The CY7C67200 still returns `0x0000` on all read attempts, including basic control registers and memory readback, so LCP/BIOS ACK still fails. Etherbone-driven reset and HPI sample-offset sweeps also returned only zeroes.
-- **Current programmed board image:** Temporary split-test image from
-  the main workspace root, checksum `0x033328D9`, with current firmware,
-  `.HPI_INT(hpi_int1)`, `last_ctrl` debug tail restored to zeros, and USB
-  interrupt pins mapped as `int0=D5`, `int1=E5`. It passed the latest 50/50
-  ping and 512 Etherbone CSR loop gate. The tracked fallback validation SOF remains
+- **USB HPI:** The FPGA-side HPI bridge now decodes the USB window correctly, uses Terasic-style registered HPI control/data timing, and successfully drives write data onto the bus. HPI is not globally write-only: only `HPI_ADDRESS` is write-only. DATA, MAILBOX, and STATUS reads are expected to work, but the CY7C67200 still returns `0x0000` on all active read attempts, including basic control registers and memory readback, so LCP/BIOS ACK still fails. Etherbone-driven reset and HPI sample-offset sweeps also returned only zeroes.
+- **Current programmed board image:** Weak-pullup diagnostic image from
+  the main workspace root, checksum `0x03332BFF`, with FPGA weak pull-ups
+  enabled on `usb_otg_data[15:0]`. It passed the latest 20/20 ping plus 128
+  Etherbone CSR loop contrast gate and earlier 49/50 ping plus 512 CSR gate.
+  The normal root USB image checksum remains `0x033328D9`, and the tracked
+  fallback validation SOF remains
   `validation_images/de2_115_vga_platform_eth10_switchfix_validated_20260427.sof`
   checksum `0x033C9E9A`.
 
@@ -419,14 +433,14 @@ python scripts\visual_board_selftest.py --start-server --port 1238 --camera 1 --
 
 ## Remaining Work
 
-1. Keep `scripts/ethernet_low_speed_test.py` as the acceptance gate before/after USB changes. The current programmed root image is checksum `0x033328D9`; the tracked corrected 10-only validation fallback remains checksum `0x033C9E9A`.
-2. The next USB ladder step can use the current root image. Capture HPI/USB evidence with `.HPI_INT(hpi_int1)`, `last_ctrl` debug tail zeros, and USB interrupt pins `int0=D5`, `int1=E5`.
+1. Keep `scripts/ethernet_low_speed_test.py` as the acceptance gate before/after USB changes. The current programmed image is the weak-pullup diagnostic checksum `0x03332BFF`; the normal root image checksum is `0x033328D9`; the tracked corrected 10-only validation fallback remains checksum `0x033C9E9A`.
+2. The next USB ladder step is CY reset/clock/HPI boot-mode strap validation. Use `scripts\run_hpi_no_analyzer_contrast.ps1` to rerun the no-analyzer proof after each change.
 3. Do not add passive bridge status bits into `last_ctrl` for routine USB debug. The split test showed that exposing `hpi_int0`, `hpi_int1`, `hpi_dreq`, and `diag_in` there can break Ethernet RX despite timing meeting. Use SignalTap/external analyzer capture or a tightly gated debug image instead.
-4. Embedded LiteScope, HPI0 source/probe, and the weak-pullup image now prove
-   the FPGA asserts read controls correctly and that DATA still samples zero
-   even when released FPGA inputs are weakly biased high. Without an external
-   analyzer, move the next debug step to CY reset/clock/HPI mode/boot straps
-   and board-level DATA bus hold causes.
+4. Embedded LiteScope, HPI0 source/probe, and the weak-pullup contrast now
+   prove the FPGA asserts read controls correctly, released/reset-low DATA
+   reads high, and only active HPI read cycles sample zero. Without an
+   external analyzer, move the next debug step to CY reset/clock/HPI mode/boot
+   straps and board-level DATA bus hold causes.
 5. Run the next Beagle capture with a simple known-good low/full-speed USB
    mouse or keyboard connected through the Beagle to the DE2-115 HOST port.
    Terasic's host mouse demo is the preferred comparison image for that test.

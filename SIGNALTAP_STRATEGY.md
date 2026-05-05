@@ -53,10 +53,20 @@ This project now has enough firmware-side evidence to make the next USB debug st
   runs the Ethernet gate, and repeats HPI write/read cycles. This is the
   replacement for an external DATA-bus capture when no logic analyzer is
   available.
+- **No-analyzer contrast automation:**
+  `scripts\run_hpi_no_analyzer_contrast.ps1` assumes the weak-pullup image is
+  programmed and captures idle/released, reset-low, active-read, and sequential
+  HPI port sweep evidence into
+  `local_artifacts\hpi_no_analyzer_contrast.log`.
 - **Weak-pullup result:** The weak-pullup image checksum `0x03332BFF` passed
   Ethernet and the fitter reported `Weak Pull Up = On` on all `usb_otg_data`
   pins. HPI DATA reads still returned all zeroes across eight cycles, so the
   zero readback is not explained by an undriven FPGA input floating low.
+- **Weak-pullup contrast result:** Idle/released and reset-low HPI0 captures
+  read `hpi_data=0xffff`/`sample_data=0xffff`, but active DATA reads with
+  `CS_N=0`, `RD_N=0`, `WR_N=1`, `ADDR=0`, and reset released read
+  `hpi_data=0x0000`/`sample_data=0x0000`. DATA, MAILBOX, STATUS, and
+  non-authoritative ADDRESS read sweeps all returned `0x0000`.
 
 ## Debug Priorities
 
@@ -89,6 +99,9 @@ Interpretation:
 - With FPGA weak pull-ups enabled on `OTG_DATA[15:0]`, DATA reads still sample
   `0x0000`. If the bus were simply released, the weak-pullup image should have
   pushed reads toward `0xffff`.
+- With the same weak-pullup image, idle/released and reset-low source/probe
+  samples do read `0xffff`. The low value is specific to active HPI read
+  cycles, not a general FPGA input or weak-pullup failure.
 - USB-line capture sees target presence/reset transitions but no host packets, so the CY is not reaching a functional USB-host state.
 - The DE2 HOST path does not currently reach packet traffic even with the
   Terasic host mouse demo. Before more HID class work, repeat the Beagle test
