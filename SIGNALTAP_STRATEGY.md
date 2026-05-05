@@ -87,6 +87,12 @@ This project now has enough firmware-side evidence to make the next USB debug st
   state while reset is low and after release. The first run showed reset-low
   `INT0=0`, `INT1=1`, `DREQ=0`; released samples through 2 seconds showed
   `INT0=1`, `INT1=1`, `DREQ=0`. Use it after any reset/boot-mode change.
+- **HPI address permutation probe:** `scripts\hpi_address_permutation_probe.py`
+  tries all 24 logical mappings of DATA/MAILBOX/ADDRESS/STATUS onto HPI address
+  slots. The reset-each run in
+  `local_artifacts\hpi_address_permutation_probe_reset_each.log` produced
+  `match=0` for every mapping; only the known `0x0011` address-slot artifact
+  appeared.
 
 ## Debug Priorities
 
@@ -119,6 +125,8 @@ Interpretation:
   strobes.
 - FPGA reset control has an observable sideband effect: `INT0` is low while
   reset is asserted and returns high after release.
+- HPI address-order confusion is unlikely: all 24 logical-port permutations
+  failed to produce a valid DATA readback or readable STATUS/MAILBOX response.
 - FPGA HPI read cycle is being issued.
 - The CY7C67200 is not returning nonzero data at the FPGA pad sample point. An Etherbone reset/sample sweep from 0 to 60 cycles also returned only zeroes, so a simple sample-offset change is unlikely to fix it.
 - With FPGA weak pull-ups enabled on `OTG_DATA[15:0]`, DATA reads still sample

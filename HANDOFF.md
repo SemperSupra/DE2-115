@@ -236,6 +236,15 @@ Workspace: `C:\Users\Mark\Projects\DE2-115`
   `DREQ=0`, and idle DATA high. This proves the FPGA reset control has an
   observable CY-side effect, but it did not reveal post-release interrupt/DREQ
   activity that would imply a responsive HPI BIOS path.
+- **2026-05-05 HPI address permutation sweep:** Added
+  `scripts\hpi_address_permutation_probe.py` to try all 24 mappings of logical
+  DATA/MAILBOX/ADDRESS/STATUS across the four HPI address slots. Fast run:
+  `local_artifacts\hpi_address_permutation_probe.log`; reset-each run:
+  `local_artifacts\hpi_address_permutation_probe_reset_each.log`. Both ended
+  with `match=0`. The reset-each run produced only the known
+  non-authoritative `0x0011` artifact in two mappings and no real DATA,
+  MAILBOX, or STATUS response. This makes HPI address-order confusion unlikely
+  to be the root blocker.
 - **2026-05-03 tool note:** `scripts/build_soc.sh` now stages generated
   Quartus host inputs (`.qsf`, `.sdc`, top Verilog, VexRiscv, init files) into
   the repo root. `scripts/load_bitstream.ps1` now selects the newest candidate
@@ -488,7 +497,8 @@ python scripts\visual_board_selftest.py --start-server --port 1238 --camera 1 --
    active HPI read cycles sample zero. Without an external analyzer, move the
    next debug step to CY clock/HPI mode/boot straps and board-level DATA bus
    hold causes. Reset timing, confirmed mailbox writes, and reset-release
-   sideband sampling did not recover readable CY STATUS/MAILBOX/DATA.
+   sideband sampling did not recover readable CY STATUS/MAILBOX/DATA; neither
+   did exhaustive logical-port permutation.
 5. Run the next Beagle capture with a simple known-good low/full-speed USB
    mouse or keyboard connected through the Beagle to the DE2-115 HOST port.
    Terasic's host mouse demo is the preferred comparison image for that test.

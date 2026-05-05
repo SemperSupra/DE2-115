@@ -96,6 +96,15 @@
   `hpi_rst_n=1`, `INT0=1`, `INT1=1`, `DREQ=0`, and idle DATA high. This proves
   the reset control has observable CY-side effect, but it did not reveal any
   sideband boot/mailbox activity after release.
+- 2026-05-05 HPI address permutation sweep:
+  `scripts\hpi_address_permutation_probe.py` tries all 24 mappings of logical
+  DATA/MAILBOX/ADDRESS/STATUS onto the four HPI address slots. Both the fast
+  run (`local_artifacts\hpi_address_permutation_probe.log`) and reset-each run
+  (`local_artifacts\hpi_address_permutation_probe_reset_each.log`) reported
+  `match=0` for every mapping. The reset-each run left only the known
+  non-authoritative `0x0011` artifact in two mappings that route DATA reads
+  through the address-slot behavior. No permutation produced a real DATA,
+  MAILBOX, or STATUS response.
 
 ## Critical Findings
 1. CY7C67200 Host port power is supplied via a robust 5V rail, bypassing the internal 10mA charge pump.
@@ -118,7 +127,8 @@
    settle windows did not recover reads, and mailbox writes are now proven at
    the pins without producing readable STATUS/MAILBOX response. Reset-release
    sideband sampling shows reset affects `INT0`, but no post-release sideband
-   activity appears. The weak-pullup contrast proves the FPGA input path reads
+   activity appears. An exhaustive logical-port permutation sweep did not
+   recover readback. The weak-pullup contrast proves the FPGA input path reads
    released DATA high, while active HPI reads drive or hold DATA low.
 5. Verify `SOF` (Start of Frame) packet generation.
 6. If enumeration stalls, compare descriptor packets with Terasic Host Demo packet logs to isolate firmware-level USB protocol issues.
