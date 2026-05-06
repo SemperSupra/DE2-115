@@ -125,6 +125,12 @@
   confirm MAX II `12MHz` clock delivery to `XTALIN`, and check for any
   board-level driver holding `OTG_DATA[15:0]` low during active reads. The
   Cyclone IV platform does not currently expose those strap or clock nodes.
+- 2026-05-06 schematic strap result:
+  DE2-115 Rev D schematic sheet 20 resolves the default CY boot straps:
+  `SCL/GPIO31` and `SDA/GPIO30` have fitted `10K` pulldowns (`R253`, `R254`),
+  optional pullups are marked `DNI` (`R251`, `R252`), and the sheet labels
+  `0/0` as `HPI` plus `Default Setting: HPI mode`. Treat standalone/EEPROM boot
+  as less likely unless the physical board population differs.
 
 ## Critical Findings
 1. CY7C67200 Host port power is supplied via a robust 5V rail, bypassing the internal 10mA charge pump.
@@ -143,11 +149,12 @@
 3. Run the Beagle 12 packet analyzer with a simple known-good low/full-speed
    mouse or keyboard on the DE2-115 HOST path.
 4. Next HPI step without an external analyzer: follow
-   `docs\CY7C67200_STRAP_CLOCK_CHECKLIST.md`. Longer reset-low and
-   post-release settle windows did not recover reads, mailbox writes are proven
-   at the pins, reset-release sideband sampling shows only the expected `INT0`
-   level change, and exhaustive logical-port permutation did not recover
-   readback. The remaining target is actual CY `GPIO30/GPIO31` strap/EEPROM
-   behavior, MAX II `12MHz` clock delivery, and board-level DATA bus holds.
+   `docs\CY7C67200_STRAP_CLOCK_CHECKLIST.md`. The schematic now points to
+   default HPI boot straps, so the remaining target is physical board
+   population confirmation, MAX II `12MHz` clock delivery, CY/USB power-reset
+   health, and board-level DATA bus holds. Longer reset-low and post-release
+   settle windows did not recover reads, mailbox writes are proven at the pins,
+   reset-release sideband sampling shows only the expected `INT0` level change,
+   and exhaustive logical-port permutation did not recover readback.
 5. Verify `SOF` (Start of Frame) packet generation.
 6. If enumeration stalls, compare descriptor packets with Terasic Host Demo packet logs to isolate firmware-level USB protocol issues.

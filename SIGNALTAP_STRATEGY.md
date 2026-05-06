@@ -104,6 +104,11 @@ This project now has enough firmware-side evidence to make the next USB debug st
   CY `GPIO30/GPIO31` boot strap and EEPROM behavior, MAX II `12MHz` delivery to
   `XTALIN`, and any non-CY driver or bus-hold condition on `OTG_DATA[15:0]`.
   Run the HPI0/source-probe scripts again only after one of those facts changes.
+- **Schematic strap result:** DE2-115 Rev D schematic sheet 20 shows
+  `SCL/GPIO31` and `SDA/GPIO30` strapped low by fitted `10K` pulldowns, with
+  optional pullups marked `DNI`; the schematic labels this as default HPI mode.
+  This moves the no-analyzer focus from boot-mode guessing to MAX II
+  `USB_12MHz`, CY/USB power-reset health, and active-read DATA bus behavior.
 
 ## Debug Priorities
 

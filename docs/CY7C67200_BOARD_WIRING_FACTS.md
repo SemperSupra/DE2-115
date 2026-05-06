@@ -46,17 +46,31 @@ Source: `hpi_manual.pdf`, page 38 of the extracted book text.
   example, so the DE2-115 must have some board-specific strap or MAX II/EEPROM
   behavior if it really powers up in HPI co-processor mode.
 
+Source: DE2-115 Main Board schematic, Rev D, sheet 20 of 28
+(`https://homepages.thm.de/~hg53/hes-ws2021/aufgabe1/de2-115_mb.pdf`).
+
+- The CY schematic page labels the boot table directly:
+  `SCK/GPIO31=0` and `SDA/GPIO30=0` selects `HPI`; `0/1` selects `HSS`;
+  `1/0` selects `SPI`; `1/1` selects `I2C EEPROM`.
+- The same sheet marks `Default Setting: HPI mode`.
+- `SCL/GPIO31` and `SDA/GPIO30` each have a fitted `10K` pulldown
+  (`R253`, `R254`) and optional `10K` pullups marked `DNI`
+  (`R251`, `R252`). This schematic therefore resolves the reset strap as
+  HPI mode for the documented Rev D board configuration.
+- `USB_12MHz` feeds CY `XTALIN`; `XTALOUT` is unconnected.
+
 ## Implication
 
-The current FPGA design should not claim to force HPI boot mode unless a
-schematic-backed `GPIO30/GPIO31` path is added. The existing `force_hpi_boot`
-signal is tied to zero and is not connected to documented DE2-115 CY boot pins.
-The next board-level check is the actual DE2-115 `GPIO30/GPIO31` strap/EEPROM
-path at reset, not another Cyclone IV signal assignment.
+The current FPGA design still should not claim to force HPI boot mode: the
+documented strap is board-level pulldown hardware, not a Cyclone IV signal. The
+existing `force_hpi_boot` signal is tied to zero and is not connected to
+documented DE2-115 CY boot pins.
 
-The next no-analyzer debug target is therefore the board-level CY clock/boot
-state, not another reset-duration change. The weak-pullup and reset-timing runs
-already prove:
+The schematic makes standalone/EEPROM boot less likely for a Rev D board with
+the default resistor population. The next no-analyzer debug target is therefore
+board-level CY clock delivery, USB/CY power/reset health, or a DATA-bus active
+read hold, not another reset-duration or address-order change. The weak-pullup
+and reset-timing runs already prove:
 
 - FPGA input path reads released/reset-low DATA high.
 - Active HPI reads with valid controls still sample zero.

@@ -20,9 +20,10 @@ The FPGA-side evidence is now strong:
 - All 24 logical DATA/MAILBOX/ADDRESS/STATUS address permutations failed to
   produce valid readback.
 
-The remaining likely class is therefore board/CY mode state: `GPIO30/GPIO31`
-boot straps, serial EEPROM interaction, MAX II `12MHz` clock ownership, or a
-board-level DATA-bus hold during active reads.
+The remaining likely class is therefore board/CY mode state: MAX II `12MHz`
+clock ownership, CY/USB power and reset health, or a board-level DATA-bus hold
+during active reads. The CY boot strap was checked against the Rev D schematic
+after this checklist was created and is now documented as default HPI mode.
 
 ## Local Documentation Facts
 
@@ -34,21 +35,22 @@ board-level DATA-bus hold during active reads.
 - `hpi_manual.pdf` warns that those I2C lines may power up high due to
   pull-ups in Cypress examples, selecting standalone/EEPROM behavior unless the
   board actively straps them otherwise.
+- The DE2-115 Rev D schematic sheet 20 shows the board actively straps
+  `SCL/GPIO31` and `SDA/GPIO30` low with fitted `10K` pulldowns (`R253`,
+  `R254`), leaves the corresponding `10K` pullups unpopulated (`R251`, `R252`
+  marked `DNI`), and labels this as `Default Setting: HPI mode`.
 - The current LiteX platform exposes HPI DATA/ADDR/CS/RD/WR/RST plus the known
   and experimental sidebands, but not `GPIO30`, `GPIO31`, or the CY clock.
 
 ## Checks
 
-1. Confirm whether the DE2-115 schematic or board files show CY
-   `GPIO30/GPIO31` tied low, tied high, connected to EEPROM only, or driven by
-   MAX II.
+1. Confirm actual resistor population on this physical board matches the Rev D
+   schematic default: `R253/R254` fitted and `R251/R252` not fitted.
 
    Interpretation:
-   - Both low at reset supports HPI co-processor mode.
-   - Both high at reset supports standalone/EEPROM mode, which would explain
-     why HPI mailbox/status behavior does not look BIOS-responsive.
-   - MAX II-driven straps mean the next debug target is the MAX II image/state,
-     not the Cyclone IV bitstream.
+   - If it matches, HPI co-processor boot straps are probably not the blocker.
+   - If the pullups are fitted or pulldowns missing on this board, standalone
+     EEPROM mode becomes plausible again.
 
 2. Confirm CY `XTALIN` has a live `12MHz` clock from MAX II while CY reset is
    released.
@@ -58,13 +60,13 @@ board-level DATA-bus hold during active reads.
      FPGA HPI timing.
    - A valid `12MHz` clock keeps focus on boot straps or bus-level behavior.
 
-3. Confirm whether the serial EEPROM on CY `GPIO30/GPIO31` is populated and
-   whether it can pull the strap pins high at reset.
+3. Confirm CY/USB power and reset health around the CY7C67200.
 
    Interpretation:
-   - Populated EEPROM plus high straps means CY may boot standalone scan code
-     instead of waiting for HPI LCP.
-   - No EEPROM or forced low straps makes standalone boot less likely.
+   - Reset is known to affect `INT0`, but a brownout, missing VCC rail, or
+     missing `USB_12MHz` can still leave HPI reads stuck at zero.
+   - The schematic shows `USB_12MHz` entering `XTALIN`; the Cyclone IV cannot
+     generate or observe that node in the current design.
 
 4. Confirm no board-level device besides the CY can actively drive
    `OTG_DATA[15:0]` low during active HPI reads.
