@@ -275,6 +275,12 @@ Workspace: `C:\Users\Mark\Projects\DE2-115`
   unless the physical board population differs; the next board-level target is
   now MAX II `USB_12MHz`, CY/USB power-reset health, and active-read DATA bus
   behavior.
+- **2026-05-06 Downloads documentation check:** The local SystemCD copy at
+  `Downloads\DE2-115_v.3.0.6_SystemCD\DE2_115_schematic\de2-115_mb.pdf`
+  confirms the same Rev D schematic strap result. The local pin CSV also agrees
+  with the current CY HPI pin map. Do not use the extracted System Builder
+  `de2_115_data.py` USB entry as authority; it conflicts with the schematic,
+  manual, and pin CSV for several USB pins.
 - **2026-05-03 tool note:** `scripts/build_soc.sh` now stages generated
   Quartus host inputs (`.qsf`, `.sdc`, top Verilog, VexRiscv, init files) into
   the repo root. `scripts/load_bitstream.ps1` now selects the newest candidate

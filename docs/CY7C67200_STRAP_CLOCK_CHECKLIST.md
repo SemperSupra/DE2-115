@@ -39,6 +39,13 @@ after this checklist was created and is now documented as default HPI mode.
   `SCL/GPIO31` and `SDA/GPIO30` low with fitted `10K` pulldowns (`R253`,
   `R254`), leaves the corresponding `10K` pullups unpopulated (`R251`, `R252`
   marked `DNI`), and labels this as `Default Setting: HPI mode`.
+- The local SystemCD copy is
+  `Downloads\DE2-115_v.3.0.6_SystemCD\DE2_115_schematic\de2-115_mb.pdf`
+  with SHA256
+  `C903D313EBA4E1DB54EF233943FBBB5DBB4F715C26F629F92EE7204C9CDC2E16`.
+- The local SystemCD pin CSV agrees with the schematic/manual USB HPI pin map.
+  The extracted Python System Builder metadata does not; do not use its USB
+  entry as an authority for HPI pins.
 - The current LiteX platform exposes HPI DATA/ADDR/CS/RD/WR/RST plus the known
   and experimental sidebands, but not `GPIO30`, `GPIO31`, or the CY clock.
 

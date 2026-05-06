@@ -47,7 +47,8 @@ Source: `hpi_manual.pdf`, page 38 of the extracted book text.
   behavior if it really powers up in HPI co-processor mode.
 
 Source: DE2-115 Main Board schematic, Rev D, sheet 20 of 28
-(`https://homepages.thm.de/~hg53/hes-ws2021/aufgabe1/de2-115_mb.pdf`).
+(`Downloads\DE2-115_v.3.0.6_SystemCD\DE2_115_schematic\de2-115_mb.pdf`,
+SHA256 `C903D313EBA4E1DB54EF233943FBBB5DBB4F715C26F629F92EE7204C9CDC2E16`).
 
 - The CY schematic page labels the boot table directly:
   `SCK/GPIO31=0` and `SDA/GPIO30=0` selects `HPI`; `0/1` selects `HSS`;
@@ -58,6 +59,21 @@ Source: DE2-115 Main Board schematic, Rev D, sheet 20 of 28
   (`R251`, `R252`). This schematic therefore resolves the reset strap as
   HPI mode for the documented Rev D board configuration.
 - `USB_12MHz` feeds CY `XTALIN`; `XTALOUT` is unconnected.
+
+Source: `Downloads\DE2-115_v.3.0.6_SystemCD\DE2_115_lab_exercises\DE2_115_pin_assignments.csv`.
+
+- The SystemCD pin CSV agrees with the CY7C67200 schematic/manual pin map for
+  the active USB HPI pins: `OTG_ADDR[1]=PIN_C3`, `OTG_ADDR[0]=PIN_H7`,
+  `OTG_CS_N=PIN_A3`, `OTG_RD_N=PIN_B3`, `OTG_WR_N=PIN_A4`,
+  `OTG_RST_N=PIN_C5`, `OTG_INT[1]=PIN_D5`, `OTG_INT[0]=PIN_A6`,
+  `OTG_DREQ[0]=PIN_J1`, and `OTG_DATA[15:0]` on
+  `G4,F3,F1,G3,G2,G1,H4,H3,H6,J7,J3,J4,K3,J5,K4,J6`.
+
+Do not use
+`Downloads\DE2-115_v.3.0.6_SystemCD\DE2_115_tools\DE2_115_system_builder\de2_115_data.py`
+as a USB pin authority. Its `USB` entry conflicts with the manual, schematic,
+and pin CSV for several signals, including `OTG_DATA`, `OTG_RD_N`, and
+`OTG_RST_N`.
 
 ## Implication
 

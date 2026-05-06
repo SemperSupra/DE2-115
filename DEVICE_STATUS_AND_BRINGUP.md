@@ -131,6 +131,12 @@
   optional pullups are marked `DNI` (`R251`, `R252`), and the sheet labels
   `0/0` as `HPI` plus `Default Setting: HPI mode`. Treat standalone/EEPROM boot
   as less likely unless the physical board population differs.
+- 2026-05-06 Downloads documentation check:
+  `Downloads\DE2-115_v.3.0.6_SystemCD\DE2_115_schematic\de2-115_mb.pdf`
+  is the local SystemCD source for the same schematic result. The SystemCD pin
+  CSV agrees with the current HPI pin map; the extracted System Builder
+  `de2_115_data.py` USB entry does not and should not be used as USB pin
+  authority.
 
 ## Critical Findings
 1. CY7C67200 Host port power is supplied via a robust 5V rail, bypassing the internal 10mA charge pump.
