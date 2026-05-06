@@ -8,17 +8,46 @@ static void log_stage(cy_hpi_ctx_t *ctx, const char *s) {
     if (ctx->puts) ctx->puts(s);
 }
 
+static void log_reset_low_read(cy_hpi_ctx_t *ctx, const char *name, uint16_t value) {
+    if (!ctx->puts || !ctx->puthex16) return;
+    ctx->puts("CY_STAGE0_RESET_LOW_READ ");
+    ctx->puts(name);
+    ctx->puts("=");
+    ctx->puthex16(value);
+    ctx->puts("\n");
+}
+
+static void cy_stage0_reset_low_active_read_probe(cy_hpi_ctx_t *ctx) {
+    cy_hpi_set_timing(ctx, 63u, 8u, 8u, 1, 0);
+    if (ctx->sleep_ms) ctx->sleep_ms(10u);
+    cy_hpi_dump_debug(ctx, "CY_STAGE0_RESET_LOW_IDLE");
+
+    uint16_t data = cy_hpi_read16(ctx, 0x1000u);
+    log_reset_low_read(ctx, "data", data);
+    cy_hpi_dump_debug(ctx, "CY_STAGE0_RESET_LOW_DATA_DBG");
+
+    uint16_t mailbox = cy_hpi_mailbox_read(ctx);
+    log_reset_low_read(ctx, "mailbox", mailbox);
+    cy_hpi_dump_debug(ctx, "CY_STAGE0_RESET_LOW_MAILBOX_DBG");
+
+    uint16_t status = cy_hpi_status_read(ctx);
+    log_reset_low_read(ctx, "status", status);
+    cy_hpi_dump_debug(ctx, "CY_STAGE0_RESET_LOW_STATUS_DBG");
+}
+
 cy_bringup_result_t cy_bringup_run(cy_hpi_ctx_t *ctx,
                                    const cy_bringup_blobs_t *blobs,
                                    int stop_on_failure) {
     uint16_t hwrev = 0, cpu = 0, pwr = 0;
     uint16_t rb = 0;
+    cy_bringup_result_t first_failure = CY_BRINGUP_OK;
 
     log_stage(ctx, "CY_STAGE0_FPGA_HPI_BRIDGE_START\n");
     cy_hpi_set_timing(ctx, CY_HPI_DEFAULT_ACCESS_CYCLES,
                       CY_HPI_DEFAULT_SAMPLE_OFFSET,
                       CY_HPI_DEFAULT_TURNAROUND_CYCLES, 1, 0);
     cy_hpi_dump_debug(ctx, "CY_STAGE0_DBG");
+    cy_stage0_reset_low_active_read_probe(ctx);
     log_stage(ctx, "CY_STAGE0_FPGA_HPI_BRIDGE_PASS\n");
 
     log_stage(ctx, "CY_STAGE1_RESET_RELEASE_START\n");
@@ -38,7 +67,8 @@ cy_bringup_result_t cy_bringup_run(cy_hpi_ctx_t *ctx,
     }
     if (!reg_ok) {
         log_stage(ctx, "CY_STAGE2_REG_READ_FAIL\n");
-        if (stop_on_failure) return CY_BRINGUP_FAIL_REG_READ;
+        if (first_failure == CY_BRINGUP_OK) first_failure = CY_BRINGUP_FAIL_REG_READ;
+        if (stop_on_failure) return first_failure;
     } else {
         log_stage(ctx, "CY_STAGE2_REG_READ_PASS\n");
     }
@@ -52,7 +82,8 @@ cy_bringup_result_t cy_bringup_run(cy_hpi_ctx_t *ctx,
     }
     if (!ram_ok) {
         log_stage(ctx, "CY_STAGE3_RAM_RW_FAIL\n");
-        if (stop_on_failure) return CY_BRINGUP_FAIL_RAM_RW;
+        if (first_failure == CY_BRINGUP_OK) first_failure = CY_BRINGUP_FAIL_RAM_RW;
+        if (stop_on_failure) return first_failure;
     } else {
         log_stage(ctx, "CY_STAGE3_RAM_RW_PASS\n");
     }
@@ -77,7 +108,8 @@ cy_bringup_result_t cy_bringup_run(cy_hpi_ctx_t *ctx,
     }
     if (!lcp_ok) {
         log_stage(ctx, "CY_STAGE4B_LCP_HANDSHAKE_FAIL\n");
-        if (stop_on_failure) return CY_BRINGUP_FAIL_LCP_HANDSHAKE;
+        if (first_failure == CY_BRINGUP_OK) first_failure = CY_BRINGUP_FAIL_LCP_HANDSHAKE;
+        if (stop_on_failure) return first_failure;
     } else {
         log_stage(ctx, "CY_STAGE4B_LCP_HANDSHAKE_PASS\n");
     }
@@ -87,9 +119,9 @@ cy_bringup_result_t cy_bringup_run(cy_hpi_ctx_t *ctx,
         log_stage(ctx, "CY_STAGE5_SCAN_COPY_START\n");
         if (!cy_scan_execute_over_hpi(ctx, blobs->scan_image, blobs->scan_image_len, &stats, 0)) {
             log_stage(ctx, "CY_STAGE5_SCAN_COPY_FAIL\n");
-            if (stop_on_failure) return CY_BRINGUP_FAIL_SCAN;
-        }
-        if (ctx->puts && ctx->puthex32) {
+            if (first_failure == CY_BRINGUP_OK) first_failure = CY_BRINGUP_FAIL_SCAN;
+            if (stop_on_failure) return first_failure;
+        } else if (ctx->puts && ctx->puthex32) {
             ctx->puts("CY_STAGE5_SCAN_COPY_PASS records=");
             ctx->puthex32(stats.records);
             ctx->puts(" bytes=");
@@ -104,13 +136,15 @@ cy_bringup_result_t cy_bringup_run(cy_hpi_ctx_t *ctx,
         log_stage(ctx, "CY_STAGE6_LCP_CALL_START\n");
         if (!cy_lcp_call_code(ctx, blobs->lcp_probe_call_addr, 1000000u)) {
             log_stage(ctx, "CY_STAGE6_LCP_CALL_FAIL\n");
-            if (stop_on_failure) return CY_BRINGUP_FAIL_LCP;
+            if (first_failure == CY_BRINGUP_OK) first_failure = CY_BRINGUP_FAIL_LCP;
+            if (stop_on_failure) return first_failure;
+        } else {
+            log_stage(ctx, "CY_STAGE6_LCP_CALL_PASS\n");
         }
-        log_stage(ctx, "CY_STAGE6_LCP_CALL_PASS\n");
     } else {
         log_stage(ctx, "CY_STAGE6_LCP_CALL_SKIP\n");
     }
 
     log_stage(ctx, "CY_STAGE7_BIOS_INT_SKIP\n");
-    return CY_BRINGUP_OK;
+    return first_failure;
 }

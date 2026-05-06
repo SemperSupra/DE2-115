@@ -89,7 +89,7 @@ def run_loop(args):
     wb.open()
     try:
         cfg_run = reset_cy(wb, args) if args.reset else hpi_cfg(
-            1, 1, args.access_cycles, args.sample_offset, args.turnaround_cycles
+            1, args.rst_n, args.access_cycles, args.sample_offset, args.turnaround_cycles
         )
         wb.write(BRIDGE_CFG0, cfg_run)
         print(
@@ -161,6 +161,8 @@ def main():
     p.add_argument("--access-cycles", type=int, default=63)
     p.add_argument("--sample-offset", type=int, default=8)
     p.add_argument("--turnaround-cycles", type=int, default=8)
+    p.add_argument("--rst-n", type=lambda v: int(v, 0), choices=[0, 1], default=1,
+                   help="CY HPI reset level while running cycles when --reset is not used")
     p.add_argument("--reset", action="store_true")
     p.add_argument("--reset-low", type=float, default=0.5)
     p.add_argument("--reset-high", type=float, default=0.5)

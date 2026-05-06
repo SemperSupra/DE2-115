@@ -1,10 +1,28 @@
 # DE2-115 Handoff - Status Update
 
-Date: 2026-05-05
+Date: 2026-05-06
 Workspace: `C:\Users\Mark\Projects\DE2-115`
 
 ## Executive Status
 
+- **2026-05-06 UART reset-low active-read result:** Ethernet is not usable on
+  the newest generated diagnostic image, so the next no-analyzer proof was
+  moved into firmware UART. The RTL now separates CY reset from the FPGA HPI
+  wrapper reset, and Stage 0 firmware performs active HPI reads while holding
+  `HPI_RST_N=0` with weak pullups enabled on `usb_otg_data[15:0]`. Programmed
+  checksum `0x03392F29` printed DATA, MAILBOX, and STATUS reset-low active
+  reads all as `0000`. Debug `cfg=000208FD` and `ctrl=01200800/01200A00/
+  01200E00` decode as reset low, active read cycles, `CS_N=0`, `RD_N=0`,
+  `WR_N=1`, and ADDR `0/1/3`. This rules out a purely post-reset CY firmware
+  state: DATA is pulled low during active reads even while the CY is held in
+  reset. Current board image is this UART diagnostic; reprogram a known-good
+  Ethernet image before any Etherbone-dependent work.
+- **2026-05-06 sideband pin caveat from Downloads:** The local SystemCD CSV
+  lists `OTG_INT[1]=PIN_D5` and `OTG_INT[0]=PIN_A6`, while the current LiteX
+  platform maps `usb_otg_int0=D5` and `usb_otg_int1=E5`; the same CSV labels
+  `E5` as `TD_HS`. This does not explain DATA/MAILBOX/STATUS readback because
+  those cycles use the HPI control/data pins, but it should be cleaned up as a
+  separate sideband/platform fix.
 - **2026-05-03 USB resume note:** A patched USB diagnostic image was built to
   continue past the invalid `HPI_ADDRESS` readback loopback and expose
   `hpi_data_oe` in the HPI debug probe path. Firmware/SoC/Quartus builds
@@ -278,9 +296,10 @@ Workspace: `C:\Users\Mark\Projects\DE2-115`
 - **2026-05-06 Downloads documentation check:** The local SystemCD copy at
   `Downloads\DE2-115_v.3.0.6_SystemCD\DE2_115_schematic\de2-115_mb.pdf`
   confirms the same Rev D schematic strap result. The local pin CSV also agrees
-  with the current CY HPI pin map. Do not use the extracted System Builder
-  `de2_115_data.py` USB entry as authority; it conflicts with the schematic,
-  manual, and pin CSV for several USB pins.
+  with the active CY HPI DATA/ADDR/CS/RD/WR/RST/DREQ pin map; however, it does
+  not agree with the current experimental interrupt sideband mapping. Do not
+  use the extracted System Builder `de2_115_data.py` USB entry as authority; it
+  conflicts with the schematic, manual, and pin CSV for several USB pins.
 - **2026-05-03 tool note:** `scripts/build_soc.sh` now stages generated
   Quartus host inputs (`.qsf`, `.sdc`, top Verilog, VexRiscv, init files) into
   the repo root. `scripts/load_bitstream.ps1` now selects the newest candidate
@@ -304,12 +323,14 @@ Workspace: `C:\Users\Mark\Projects\DE2-115`
 - **Board-wide device plan:** `DEVICE_STATUS_AND_BRINGUP.md` records the
   status of each DE2-115 device and the staged strategy for remaining bring-up.
 - **USB HPI:** The FPGA-side HPI bridge now decodes the USB window correctly, uses Terasic-style registered HPI control/data timing, and successfully drives write data onto the bus. HPI is not globally write-only: only `HPI_ADDRESS` is write-only. DATA, MAILBOX, and STATUS reads are expected to work, but the CY7C67200 still returns `0x0000` on all active read attempts, including basic control registers and memory readback, so LCP/BIOS ACK still fails. Etherbone-driven reset and HPI sample-offset sweeps also returned only zeroes.
-- **Current programmed board image:** Weak-pullup diagnostic image from
-  the main workspace root, checksum `0x03332BFF`, with FPGA weak pull-ups
-  enabled on `usb_otg_data[15:0]`. It passed the latest 20/20 ping plus 128
-  Etherbone CSR loop contrast gate and earlier 49/50 ping plus 512 CSR gate.
-  The normal root USB image checksum remains `0x033328D9`, and the tracked
-  fallback validation SOF remains
+- **Current programmed board image:** UART reset-low active-read diagnostic
+  image from the main workspace root, checksum `0x03392F29`, with FPGA weak
+  pull-ups enabled on `usb_otg_data[15:0]`. It does not pass the host Ethernet
+  gate (`Destination host unreachable`; `litex_server` refused), but COM3 UART
+  works and captured the decisive reset-low active-read result. The previous
+  weak-pullup Etherbone diagnostic checksum was `0x03332BFF`, the normal root
+  USB image checksum remains `0x033328D9`, and the tracked fallback validation
+  SOF remains
   `validation_images/de2_115_vga_platform_eth10_switchfix_validated_20260427.sof`
   checksum `0x033C9E9A`.
 
@@ -524,7 +545,13 @@ python scripts\visual_board_selftest.py --start-server --port 1238 --camera 1 --
 
 ## Remaining Work
 
-1. Keep `scripts/ethernet_low_speed_test.py` as the acceptance gate before/after USB changes. The current programmed image is the weak-pullup diagnostic checksum `0x03332BFF`; the normal root image checksum is `0x033328D9`; the tracked corrected 10-only validation fallback remains checksum `0x033C9E9A`.
+1. Keep `scripts/ethernet_low_speed_test.py` as the acceptance gate before and
+   after USB changes. Current programmed image is the UART reset-low diagnostic
+   checksum `0x03392F29`, and it is not Etherbone-reachable. Reprogram a
+   known-good Ethernet image before any host-side HPI scripts. The previous
+   weak-pullup diagnostic checksum was `0x03332BFF`, the normal root image
+   checksum is `0x033328D9`, and the tracked corrected 10-only validation
+   fallback remains checksum `0x033C9E9A`.
 2. The next USB ladder step is CY clock, CY/USB power-reset, and physical
    board-population validation using
    `docs\CY7C67200_STRAP_CLOCK_CHECKLIST.md`. The Rev D schematic points to
@@ -537,16 +564,14 @@ python scripts\visual_board_selftest.py --start-server --port 1238 --camera 1 --
    `scripts\hpi_address_permutation_probe.py --reset-each` to rerun proof only
    after a clock/power/strap-population/board-level change.
 3. Do not add passive bridge status bits into `last_ctrl` for routine USB debug. The split test showed that exposing `hpi_int0`, `hpi_int1`, `hpi_dreq`, and `diag_in` there can break Ethernet RX despite timing meeting. Use SignalTap/external analyzer capture or a tightly gated debug image instead.
-4. Embedded LiteScope, HPI0 source/probe, weak-pullup contrast, and mailbox
+4. Embedded LiteScope, HPI0 source/probe, weak-pullup contrast, mailbox
    write-window capture now prove the FPGA asserts read controls correctly,
-   drives write data correctly, released/reset-low DATA reads high, and only
-   active HPI read cycles sample zero. Without an external analyzer, move the
-   next debug step to CY clock/HPI mode/boot straps and board-level DATA bus
-   hold causes. Reset timing, confirmed mailbox writes, and reset-release
-   sideband sampling did not recover readable CY STATUS/MAILBOX/DATA; neither
-   did exhaustive logical-port permutation. The most concrete remaining
-   no-analyzer target is the CY `GPIO30/GPIO31` strap/EEPROM path and MAX II
-   `12MHz` clock ownership.
+   drives write data correctly, released/reset-low idle DATA reads high, and
+   active HPI read cycles sample zero even when CY reset is held low. Without
+   an external analyzer, move the next debug step to CY clock/power/reset and
+   board-level DATA bus hold causes. Reset timing, confirmed mailbox writes,
+   reset-release sideband sampling, exhaustive logical-port permutation, and
+   UART reset-low active reads did not recover readable CY STATUS/MAILBOX/DATA.
 5. Run the next Beagle capture with a simple known-good low/full-speed USB
    mouse or keyboard connected through the Beagle to the DE2-115 HOST port.
    Terasic's host mouse demo is the preferred comparison image for that test.

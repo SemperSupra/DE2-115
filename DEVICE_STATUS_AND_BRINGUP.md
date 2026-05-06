@@ -1,16 +1,21 @@
-# USB Host Bring-Up Status (2026-05-05)
+# USB Host Bring-Up Status (2026-05-06)
 
 ## Current Status
 - USB Host port powered: Yes (4.99V)
-- CY7C67200 HPI interface: Responding to read/write probes.
-- Firmware bring-up: Initialized (with HPI loopback test bypassed).
+- CY7C67200 HPI interface: FPGA write cycles are visible; active read cycles
+  still sample `0x0000` for DATA, MAILBOX, and STATUS.
+- Firmware bring-up: UART diagnostic-idle path is working; HPI register reads
+  still fail before LCP/BIOS handoff.
 - USB Packet status: Waiting for Beagle 12 verification with patched firmware.
-- Ethernet gate for USB builds: Passing for the current root INT1-only bridge
-  image, checksum `0x033328D9`. The gate now stresses `lcd_out` instead of
-  red LEDs because USB diagnostic idle firmware owns `leds_r_out` as a
-  heartbeat. Passive HPI debug-bit exposure in `last_ctrl` breaks the gate.
-- USB interrupt pins are restored to the passing mapping: `int0=D5`,
-  `int1=E5`.
+- Ethernet gate for the latest generated UART reset-low diagnostic image is
+  failing from the host side (`Destination host unreachable`; `litex_server`
+  never accepts connections), although UART boot logs continue to work. Earlier
+  root image `0x033328D9` and weak-pullup image `0x03332BFF` had passed the
+  Ethernet gate.
+- USB sideband caveat from local SystemCD: the current platform maps
+  `int0=D5`, `int1=E5`, but Terasic's CSV lists `OTG_INT[1]=D5`,
+  `OTG_INT[0]=A6`; `E5` is `TD_HS`. This sideband mismatch is not used for
+  DATA/MAILBOX/STATUS reads, but it should be cleaned up separately.
 - HPI writes are visible at the data path, but normal HPI reads remain
   `0x0000` across sample/access timing sweeps.
 - `scripts\capture_hpi_source_probe.ps1` now provides a repeatable DATA-read
@@ -137,6 +142,15 @@
   CSV agrees with the current HPI pin map; the extracted System Builder
   `de2_115_data.py` USB entry does not and should not be used as USB pin
   authority.
+- 2026-05-06 UART-only reset-low active-read diagnostic:
+  after separating CY reset from the FPGA HPI wrapper reset, firmware now holds
+  `HPI_RST_N=0`, enables weak pullups on `usb_otg_data[15:0]`, and performs
+  real HPI reads before releasing the CY. Programmed checksum `0x03392F29`
+  prints `cfg=000208FD`, then DATA, MAILBOX, and STATUS all read `0000`.
+  The decoded `ctrl` values show active read cycles with `CS_N=0`, `RD_N=0`,
+  `WR_N=1`, reset low, and ADDR `0/1/3`. This rules out a pure post-release
+  CY firmware state as the reason active reads go low; the bus goes low even
+  while the CY is held in reset.
 
 ## Critical Findings
 1. CY7C67200 Host port power is supplied via a robust 5V rail, bypassing the internal 10mA charge pump.
@@ -147,20 +161,18 @@
    board state returns `0x0000` for all active HPI reads.
 
 ## Recommended Next Steps
-1. Reprogram the normal root INT1-only image (`0x033328D9`) before returning
-   to USB packet capture; the board is currently on the weak-pullup diagnostic
-   image (`0x03332BFF`).
-2. Run `scripts\ethernet_low_speed_test.py --ping-count 50 --csr-loops 512 --bind-port 1235`
-   before trusting any USB evidence.
+1. Current programmed image is the UART reset-low diagnostic checksum
+   `0x03392F29`; reprogram a known-good Ethernet image before any
+   Etherbone-dependent work.
+2. Do not rely on Etherbone on the current diagnostic image. Use COM3 UART for
+   this HPI evidence until a fresh image passes
+   `scripts\ethernet_low_speed_test.py --ping-count 50 --csr-loops 512 --bind-port 1235`.
 3. Run the Beagle 12 packet analyzer with a simple known-good low/full-speed
    mouse or keyboard on the DE2-115 HOST path.
-4. Next HPI step without an external analyzer: follow
-   `docs\CY7C67200_STRAP_CLOCK_CHECKLIST.md`. The schematic now points to
-   default HPI boot straps, so the remaining target is physical board
-   population confirmation, MAX II `12MHz` clock delivery, CY/USB power-reset
-   health, and board-level DATA bus holds. Longer reset-low and post-release
-   settle windows did not recover reads, mailbox writes are proven at the pins,
-   reset-release sideband sampling shows only the expected `INT0` level change,
-   and exhaustive logical-port permutation did not recover readback.
+4. Next HPI step without an external analyzer: focus on board-level causes for
+   active-read DATA being forced low under reset: CY/USB power-reset health,
+   MAX II `USB_12MHz` delivery to CY `XTALIN`, physical resistor population,
+   and any non-CY device/buffer that could hold `OTG_DATA[15:0]` low when
+   `CS_N/RD_N` assert.
 5. Verify `SOF` (Start of Frame) packet generation.
 6. If enumeration stalls, compare descriptor packets with Terasic Host Demo packet logs to isolate firmware-level USB protocol issues.

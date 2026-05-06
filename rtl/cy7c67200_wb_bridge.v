@@ -83,6 +83,7 @@ module cy7c67200_wb_bridge (
         .iWR_N((hpi_access &  latched_we) ? 1'b0 : 1'b1),
         .iCS_N(~hpi_access),
         .iRST_N(cy_i_rst_n),
+        .iFPGA_RST(rst),
         .iCLK(clk),
         .oINT(cy_o_int),
         .HPI_DATA(hpi_data),
@@ -145,6 +146,38 @@ module cy7c67200_wb_bridge (
     );
 
     assign dbg_probe = diag_probe_mux;
+
+`ifdef HPI_PIN_SIGNALTAP
+    wire [68:0] hpi_stp_data = {
+        1'b0, cy_o_int, hpi_int0, hpi_int1, hpi_dreq, rst, hpi_rst_n,
+        hpi_access, active, latched_we, wb_we, hpi_cs_n, hpi_rd_n, hpi_wr_n,
+        hpi_addr, state, count, write_data, cy_o_data[15:0], hpi_data
+    };
+
+    sld_signaltap #(
+        .SLD_DATA_BITS(69),
+        .SLD_TRIGGER_BITS(1),
+        .SLD_STORAGE_QUALIFIER_BITS(1),
+        .SLD_SAMPLE_DEPTH(256),
+        .SLD_MEM_ADDRESS_BITS(8),
+        .SLD_DATA_BIT_CNTR_BITS(7),
+        .SLD_TRIGGER_LEVEL(1),
+        .SLD_TRIGGER_LEVEL_PIPELINE(1),
+        .SLD_RAM_BLOCK_TYPE("M4K"),
+        .SLD_SECTION_ID("hpi_pin_signaltap"),
+        .SLD_NODE_INFO(0),
+        .SLD_NODE_CRC_BITS(32),
+        .SLD_NODE_CRC_LOWORD(16'h6720),
+        .SLD_NODE_CRC_HIWORD(16'h2026)
+    ) hpi_pin_signaltap (
+        .acq_clk(clk),
+        .acq_data_in(hpi_stp_data),
+        .acq_trigger_in({~hpi_rd_n}),
+        .acq_storage_qualifier_in({1'b1}),
+        .storage_enable(1'b1),
+        .trigger_in(1'b0)
+    );
+`endif
 
     always @(*) begin
         if (debug_access) begin

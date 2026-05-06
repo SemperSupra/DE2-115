@@ -15,15 +15,20 @@ The FPGA-side evidence is now strong:
   and the FPGA not driving the DATA bus.
 - Weak pull-ups prove idle/released and reset-low DATA can sample high.
 - Active HPI DATA/MAILBOX/STATUS reads still sample `0x0000`.
+- A UART-only diagnostic now performs active reads while holding
+  `HPI_RST_N=0`; DATA, MAILBOX, and STATUS still sample `0x0000` with weak
+  pullups enabled, so the active-read low condition is not solely a post-release
+  CY firmware/BIOS state.
 - Reset release changes `INT0` from low to high, proving reset has an
   observable CY-side effect.
 - All 24 logical DATA/MAILBOX/ADDRESS/STATUS address permutations failed to
   produce valid readback.
 
-The remaining likely class is therefore board/CY mode state: MAX II `12MHz`
-clock ownership, CY/USB power and reset health, or a board-level DATA-bus hold
-during active reads. The CY boot strap was checked against the Rev D schematic
-after this checklist was created and is now documented as default HPI mode.
+The remaining likely class is therefore board/CY electrical state: MAX II
+`12MHz` clock ownership, CY/USB power and reset health, or a board-level
+DATA-bus hold during active reads. The CY boot strap was checked against the
+Rev D schematic after this checklist was created and is now documented as
+default HPI mode.
 
 ## Local Documentation Facts
 
@@ -79,10 +84,11 @@ after this checklist was created and is now documented as default HPI mode.
    `OTG_DATA[15:0]` low during active HPI reads.
 
    Interpretation:
-   - A second driver or buffer direction issue would match the weak-pullup
-     contrast: idle high, active read low.
-   - If CY is the only active driver, then the CY is intentionally returning
-     zero or is not in the expected HPI-readable state.
+   - A second driver or buffer direction issue would match the UART and
+     weak-pullup contrast: idle high, active read low, even with CY reset held
+     low.
+   - If CY is the only active driver, then the CY or its local power/clock/reset
+     state is forcing zero during active HPI reads.
 
 ## Rerun After Any Hardware/Strap Change
 
@@ -94,4 +100,6 @@ python scripts\hpi_address_permutation_probe.py --start-server --port 1235 --res
 
 If reads become nonzero, reprogram the normal root image (`0x033328D9`) before
 resuming LCP/SIE/USB packet work. The currently programmed image is the
-weak-pullup diagnostic (`0x03332BFF`).
+UART reset-low diagnostic (`0x03392F29`), which is not Etherbone-reachable;
+use COM3 UART for this diagnostic or reprogram a known-good Ethernet image
+before running host-side scripts.

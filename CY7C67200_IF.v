@@ -6,6 +6,7 @@ module CY7C67200_IF(
     input  wire        iWR_N,
     input  wire        iCS_N,
     input  wire        iRST_N,
+    input  wire        iFPGA_RST,
     input  wire        iCLK,
     output reg         oINT,
     inout  wire [15:0] HPI_DATA,
@@ -17,13 +18,13 @@ module CY7C67200_IF(
     input  wire        HPI_INT
 );
 
-    reg [15:0] tmp_data;
+    reg [15:0] tmp_data = 16'd0;
 
     assign HPI_RST_N = iRST_N;
     assign HPI_DATA = HPI_WR_N ? 16'hzzzz : tmp_data;
 
-    always @(posedge iCLK or negedge iRST_N) begin
-        if (!iRST_N) begin
+    always @(posedge iCLK) begin
+        if (iFPGA_RST) begin
             tmp_data <= 16'd0;
             HPI_ADDR <= 2'd0;
             HPI_RD_N <= 1'b1;
