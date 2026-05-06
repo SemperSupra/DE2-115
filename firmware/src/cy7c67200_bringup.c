@@ -17,10 +17,58 @@ static void log_reset_low_read(cy_hpi_ctx_t *ctx, const char *name, uint16_t val
     ctx->puts("\n");
 }
 
+static uint32_t manual_ctrl_word(int force_en, int rd_n, int wr_n, int cs_n, uint16_t addr) {
+    return ((force_en ? 1u : 0u) |
+            ((rd_n ? 1u : 0u) << 1) |
+            ((wr_n ? 1u : 0u) << 2) |
+            ((cs_n ? 1u : 0u) << 3) |
+            (((uint32_t)addr & 0x3u) << 4));
+}
+
+static void log_manual_sample(cy_hpi_ctx_t *ctx, const char *label) {
+    if (!ctx->puts || !ctx->puthex16 || !ctx->puthex32) return;
+    uint32_t ctrl = *cy_hpi_reg32(ctx, CY_HPI_MANUAL_CTRL_OFFSET);
+    uint16_t sample = (uint16_t)(*cy_hpi_reg32(ctx, CY_HPI_MANUAL_SAMPLE_OFFSET) & 0xffffu);
+    uint16_t cy = (uint16_t)(*cy_hpi_reg32(ctx, CY_HPI_MANUAL_CY_OFFSET) & 0xffffu);
+
+    ctx->puts("CY_STAGE0_MANUAL ");
+    ctx->puts(label);
+    ctx->puts(" ctrl=");
+    ctx->puthex32(ctrl);
+    ctx->puts(" sample=");
+    ctx->puthex16(sample);
+    ctx->puts(" cy=");
+    ctx->puthex16(cy);
+    ctx->puts("\n");
+}
+
+static void set_manual_ctrl(cy_hpi_ctx_t *ctx, const char *label,
+                            int force_en, int rd_n, int wr_n, int cs_n,
+                            uint16_t addr) {
+    *cy_hpi_reg32(ctx, CY_HPI_MANUAL_CTRL_OFFSET) =
+        manual_ctrl_word(force_en, rd_n, wr_n, cs_n, addr);
+    if (ctx->sleep_ms) ctx->sleep_ms(2u);
+    log_manual_sample(ctx, label);
+}
+
+static void cy_stage0_manual_pin_sweep(cy_hpi_ctx_t *ctx) {
+    *cy_hpi_reg32(ctx, CY_HPI_MANUAL_DATA_OFFSET) = 0xa5a5u;
+    set_manual_ctrl(ctx, "idle", 1, 1, 1, 1, 0);
+    set_manual_ctrl(ctx, "cs_only", 1, 1, 1, 0, 0);
+    set_manual_ctrl(ctx, "rd_only", 1, 0, 1, 1, 0);
+    set_manual_ctrl(ctx, "read_data", 1, 0, 1, 0, 0);
+    set_manual_ctrl(ctx, "read_mailbox", 1, 0, 1, 0, 1);
+    set_manual_ctrl(ctx, "read_address", 1, 0, 1, 0, 2);
+    set_manual_ctrl(ctx, "read_status", 1, 0, 1, 0, 3);
+    set_manual_ctrl(ctx, "write_drive", 1, 1, 0, 0, 0);
+    set_manual_ctrl(ctx, "released", 0, 1, 1, 1, 0);
+}
+
 static void cy_stage0_reset_low_active_read_probe(cy_hpi_ctx_t *ctx) {
     cy_hpi_set_timing(ctx, 63u, 8u, 8u, 1, 0);
     if (ctx->sleep_ms) ctx->sleep_ms(10u);
     cy_hpi_dump_debug(ctx, "CY_STAGE0_RESET_LOW_IDLE");
+    cy_stage0_manual_pin_sweep(ctx);
 
     uint16_t data = cy_hpi_read16(ctx, 0x1000u);
     log_reset_low_read(ctx, "data", data);

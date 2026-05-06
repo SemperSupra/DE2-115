@@ -151,6 +151,17 @@
   `WR_N=1`, reset low, and ADDR `0/1/3`. This rules out a pure post-release
   CY firmware state as the reason active reads go low; the bus goes low even
   while the CY is held in reset.
+- 2026-05-06 manual HPI pin sweep diagnostic:
+  the current UART/weak-pullup image, checksum `0x0312EE0C`, adds manual
+  control of HPI `ADDR`, `CS_N`, `RD_N`, `WR_N`, and write data through debug
+  registers. With CY reset held low, manual `idle`, `cs_only`, and `rd_only`
+  all sampled `FFFF`; selected reads (`CS_N=0`, `RD_N=0`, `WR_N=1`) sampled
+  `0000` for DATA, MAILBOX, ADDRESS, and STATUS; manual write drive sampled
+  `A5A5`; and release returned to `FFFF`. Manual ctrl decode is bit0
+  `force_en`, bit1 `rd_n`, bit2 `wr_n`, bit3 `cs_n`, bits5:4 `addr`.
+  This proves the bus is not simply held low by either read strobe alone or
+  chip-select alone. The low condition appears only when the board/CY path sees
+  a true selected read cycle, even while CY reset is asserted.
 
 ## Critical Findings
 1. CY7C67200 Host port power is supplied via a robust 5V rail, bypassing the internal 10mA charge pump.
@@ -161,18 +172,19 @@
    board state returns `0x0000` for all active HPI reads.
 
 ## Recommended Next Steps
-1. Current programmed image is the UART reset-low diagnostic checksum
-   `0x03392F29`; reprogram a known-good Ethernet image before any
+1. Current programmed image is the UART manual HPI pin-sweep diagnostic
+   checksum `0x0312EE0C`; reprogram a known-good Ethernet image before any
    Etherbone-dependent work.
 2. Do not rely on Etherbone on the current diagnostic image. Use COM3 UART for
    this HPI evidence until a fresh image passes
    `scripts\ethernet_low_speed_test.py --ping-count 50 --csr-loops 512 --bind-port 1235`.
 3. Run the Beagle 12 packet analyzer with a simple known-good low/full-speed
    mouse or keyboard on the DE2-115 HOST path.
-4. Next HPI step without an external analyzer: focus on board-level causes for
-   active-read DATA being forced low under reset: CY/USB power-reset health,
-   MAX II `USB_12MHz` delivery to CY `XTALIN`, physical resistor population,
-   and any non-CY device/buffer that could hold `OTG_DATA[15:0]` low when
-   `CS_N/RD_N` assert.
+4. Next HPI step without an external analyzer: focus on selected-read
+   board/CY behavior. `CS_N` alone and `RD_N` alone leave DATA high, but
+   `CS_N/RD_N` together force DATA low under reset. Check CY/USB power-reset
+   health, MAX II `USB_12MHz` delivery to CY `XTALIN`, physical resistor
+   population, and any non-CY device/buffer or CY output-enable condition that
+   can drive `OTG_DATA[15:0]` low only during selected reads.
 5. Verify `SOF` (Start of Frame) packet generation.
 6. If enumeration stalls, compare descriptor packets with Terasic Host Demo packet logs to isolate firmware-level USB protocol issues.

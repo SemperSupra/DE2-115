@@ -52,6 +52,12 @@ module cy7c67200_wb_bridge (
     reg [5:0]  cfg_access_cycles = ACCESS_CYCLES_DEFAULT;
     reg [5:0]  cfg_sample_offset = SAMPLE_OFFSET_DEFAULT;
     reg [5:0]  cfg_turnaround_cycles = TURNAROUND_CYCLES_DEFAULT;
+    reg        manual_force_en = 1'b0;
+    reg [1:0]  manual_addr = 2'd0;
+    reg        manual_rd_n = 1'b1;
+    reg        manual_wr_n = 1'b1;
+    reg        manual_cs_n = 1'b1;
+    reg [15:0] manual_data = 16'd0;
 
     wire       wb_access = wb_cyc & wb_stb;
     // LiteX passes the absolute Wishbone word address. Decode only the local
@@ -61,8 +67,13 @@ module cy7c67200_wb_bridge (
     // Map debug registers to anything above local word address 0x3F.
     wire       debug_access = wb_access & (local_adr[13:6] != 8'd0);
     wire [1:0] bus_hpi_addr = local_adr[1:0];
-    wire [1:0] debug_index = local_adr[1:0];
+    wire [2:0] debug_index = local_adr[2:0];
     wire       hpi_access = active & ~debug_latched;
+    wire [1:0] cy_if_addr = manual_force_en ? manual_addr : latched_adr[1:0];
+    wire       cy_if_rd_n = manual_force_en ? manual_rd_n : ((hpi_access & ~latched_we) ? 1'b0 : 1'b1);
+    wire       cy_if_wr_n = manual_force_en ? manual_wr_n : ((hpi_access &  latched_we) ? 1'b0 : 1'b1);
+    wire       cy_if_cs_n = manual_force_en ? manual_cs_n : ~hpi_access;
+    wire [15:0] cy_if_write_data = manual_force_en ? manual_data : write_data;
     wire [5:0] effective_access_cycles =
         (cfg_access_cycles == 6'd0) ? 6'd1 : cfg_access_cycles;
     wire [5:0] effective_turnaround_cycles =
@@ -76,12 +87,12 @@ module cy7c67200_wb_bridge (
     wire [3:0] diag_source;
 
     CY7C67200_IF cy_if (
-        .iDATA({16'h0000, write_data}),
+        .iDATA({16'h0000, cy_if_write_data}),
         .oDATA(cy_o_data),
-        .iADDR(latched_adr[1:0]),
-        .iRD_N((hpi_access & ~latched_we) ? 1'b0 : 1'b1),
-        .iWR_N((hpi_access &  latched_we) ? 1'b0 : 1'b1),
-        .iCS_N(~hpi_access),
+        .iADDR(cy_if_addr),
+        .iRD_N(cy_if_rd_n),
+        .iWR_N(cy_if_wr_n),
+        .iCS_N(cy_if_cs_n),
         .iRST_N(cy_i_rst_n),
         .iFPGA_RST(rst),
         .iCLK(clk),
@@ -182,10 +193,14 @@ module cy7c67200_wb_bridge (
     always @(*) begin
         if (debug_access) begin
             case (debug_index)
-            2'd0: wb_dat_r = {12'd0, cfg_turnaround_cycles, cfg_sample_offset, cfg_access_cycles, cfg_hpi_rst_n, cfg_force_rst_en};
-            2'd1: wb_dat_r = last_ctrl;
-            2'd2: wb_dat_r = {16'h0000, last_sample_data};
-            2'd3: wb_dat_r = {16'h0000, last_cy_data};
+            3'd0: wb_dat_r = {12'd0, cfg_turnaround_cycles, cfg_sample_offset, cfg_access_cycles, cfg_hpi_rst_n, cfg_force_rst_en};
+            3'd1: wb_dat_r = last_ctrl;
+            3'd2: wb_dat_r = {16'h0000, last_sample_data};
+            3'd3: wb_dat_r = {16'h0000, last_cy_data};
+            3'd4: wb_dat_r = {24'd0, manual_addr, manual_cs_n, manual_wr_n, manual_rd_n, manual_force_en};
+            3'd5: wb_dat_r = {16'h0000, manual_data};
+            3'd6: wb_dat_r = {16'h0000, hpi_data};
+            3'd7: wb_dat_r = {16'h0000, cy_o_data[15:0]};
             default: wb_dat_r = 32'd0;
             endcase
         end else begin
@@ -219,6 +234,12 @@ module cy7c67200_wb_bridge (
             cfg_access_cycles <= ACCESS_CYCLES_DEFAULT;
             cfg_sample_offset <= SAMPLE_OFFSET_DEFAULT;
             cfg_turnaround_cycles <= TURNAROUND_CYCLES_DEFAULT;
+            manual_force_en <= 1'b0;
+            manual_addr <= 2'd0;
+            manual_rd_n <= 1'b1;
+            manual_wr_n <= 1'b1;
+            manual_cs_n <= 1'b1;
+            manual_data <= 16'd0;
         end else begin
             case (state)
             STATE_IDLE: begin
@@ -228,12 +249,22 @@ module cy7c67200_wb_bridge (
                     wb_ack <= 1'b1;
                     if (wb_we) begin
                         case (debug_index)
-                        2'd0: begin
+                        3'd0: begin
                             cfg_force_rst_en   <= wb_dat_w[0];
                             cfg_hpi_rst_n      <= wb_dat_w[1];
                             cfg_access_cycles  <= wb_dat_w[7:2];
                             cfg_sample_offset  <= wb_dat_w[13:8];
                             cfg_turnaround_cycles <= wb_dat_w[19:14];
+                        end
+                        3'd4: begin
+                            manual_force_en <= wb_dat_w[0];
+                            manual_rd_n     <= wb_dat_w[1];
+                            manual_wr_n     <= wb_dat_w[2];
+                            manual_cs_n     <= wb_dat_w[3];
+                            manual_addr     <= wb_dat_w[5:4];
+                        end
+                        3'd5: begin
+                            manual_data <= wb_dat_w[15:0];
                         end
                         default: begin
                         end

@@ -25,6 +25,10 @@ typedef struct cy_hpi_ctx {
 #define CY_HPI_DBG_CTRL_OFFSET   0x104u
 #define CY_HPI_DBG_SAMPLE_OFFSET 0x108u
 #define CY_HPI_DBG_CY_OFFSET     0x10Cu
+#define CY_HPI_MANUAL_CTRL_OFFSET 0x110u
+#define CY_HPI_MANUAL_DATA_OFFSET 0x114u
+#define CY_HPI_MANUAL_SAMPLE_OFFSET 0x118u
+#define CY_HPI_MANUAL_CY_OFFSET  0x11Cu
 
 #define CY_HPI_CFG(force_rst, rst_n, access, sample, turnaround)     (((force_rst) ? 1u : 0u) | (((rst_n) ? 1u : 0u) << 1) |      (((uint32_t)(access) & 0x3fu) << 2) |      (((uint32_t)(sample) & 0x3fu) << 8) |      (((uint32_t)(turnaround) & 0x3fu) << 14))
 
