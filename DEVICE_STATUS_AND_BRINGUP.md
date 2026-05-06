@@ -162,6 +162,16 @@
   This proves the bus is not simply held low by either read strobe alone or
   chip-select alone. The low condition appears only when the board/CY path sees
   a true selected read cycle, even while CY reset is asserted.
+- 2026-05-06 manual HPI edge/order sweep diagnostic:
+  checksum `0x0314A683` extends the UART manual sweep under CY reset. After a
+  selected read drives DATA to `0000`, deasserting `RD_N` while leaving
+  `CS_N=0` returns DATA to `FFFF` at the immediate `0ms` sample and stays high
+  at `1ms/10ms`. Repeating the selected read and deasserting `CS_N` while
+  leaving `RD_N=0` also returns DATA to `FFFF` immediately. Assertion order
+  does not matter: `CS_N` first then `RD_N` and `RD_N` first then `CS_N` both
+  stay high on the single-strobe step and go low only on the selected-read
+  step. This narrows the failure to selected-read output-enable/read-decode
+  behavior in the CY/board path, not a latched/stuck DATA bus.
 
 ## Critical Findings
 1. CY7C67200 Host port power is supplied via a robust 5V rail, bypassing the internal 10mA charge pump.
@@ -172,8 +182,8 @@
    board state returns `0x0000` for all active HPI reads.
 
 ## Recommended Next Steps
-1. Current programmed image is the UART manual HPI pin-sweep diagnostic
-   checksum `0x0312EE0C`; reprogram a known-good Ethernet image before any
+1. Current programmed image is the UART manual HPI edge-sweep diagnostic
+   checksum `0x0314A683`; reprogram a known-good Ethernet image before any
    Etherbone-dependent work.
 2. Do not rely on Etherbone on the current diagnostic image. Use COM3 UART for
    this HPI evidence until a fresh image passes
@@ -181,10 +191,11 @@
 3. Run the Beagle 12 packet analyzer with a simple known-good low/full-speed
    mouse or keyboard on the DE2-115 HOST path.
 4. Next HPI step without an external analyzer: focus on selected-read
-   board/CY behavior. `CS_N` alone and `RD_N` alone leave DATA high, but
-   `CS_N/RD_N` together force DATA low under reset. Check CY/USB power-reset
-   health, MAX II `USB_12MHz` delivery to CY `XTALIN`, physical resistor
-   population, and any non-CY device/buffer or CY output-enable condition that
-   can drive `OTG_DATA[15:0]` low only during selected reads.
+   board/CY behavior. `CS_N` alone and `RD_N` alone leave DATA high, immediate
+   deassertion of either strobe releases DATA high, but `CS_N/RD_N` together
+   force DATA low under reset. Check CY/USB power-reset health, MAX II
+   `USB_12MHz` delivery to CY `XTALIN`, physical resistor population, and any
+   non-CY device/buffer or CY output-enable condition that can drive
+   `OTG_DATA[15:0]` low only during selected reads.
 5. Verify `SOF` (Start of Frame) packet generation.
 6. If enumeration stalls, compare descriptor packets with Terasic Host Demo packet logs to isolate firmware-level USB protocol issues.

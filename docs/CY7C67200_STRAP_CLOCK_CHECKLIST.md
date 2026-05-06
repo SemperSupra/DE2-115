@@ -24,6 +24,10 @@ The FPGA-side evidence is now strong:
   `idle`, `cs_only`, and `rd_only` sample `FFFF`; true selected reads
   (`CS_N=0`, `RD_N=0`, `WR_N=1`) sample `0000` for all four HPI address values;
   manual write drive samples `A5A5`; release returns to `FFFF`.
+- A follow-up manual edge/order sweep shows that DATA returns to `FFFF`
+  immediately when either `RD_N` or `CS_N` is deasserted after a selected read.
+  Assertion order does not matter: the bus stays high on the single-strobe
+  phase and goes low only once both `CS_N` and `RD_N` are asserted.
 - Reset release changes `INT0` from low to high, proving reset has an
   observable CY-side effect.
 - All 24 logical DATA/MAILBOX/ADDRESS/STATUS address permutations failed to
@@ -32,7 +36,7 @@ The FPGA-side evidence is now strong:
 The remaining likely class is therefore board/CY electrical state on a selected
 read: MAX II `12MHz` clock ownership, CY/USB power and reset health, CY
 output-enable/read-decode behavior, or a board-level DATA-bus hold that only
-appears when both `CS_N` and `RD_N` assert. The CY boot strap was checked
+appears while both `CS_N` and `RD_N` are asserted. The CY boot strap was checked
 against the Rev D schematic after this checklist was created and is now
 documented as default HPI mode.
 
@@ -92,8 +96,8 @@ documented as default HPI mode.
    Interpretation:
    - A second driver, buffer direction issue, or CY output-enable/read-decode
      failure would match the UART and weak-pullup contrast: idle high,
-     `CS_N`-only high, `RD_N`-only high, selected read low, even with CY reset
-     held low.
+     `CS_N`-only high, `RD_N`-only high, selected read low, immediate release
+     high after either strobe deasserts, even with CY reset held low.
    - If CY is the only active driver, then the CY or its local power/clock/reset
      state is forcing zero during active HPI reads.
 
@@ -107,7 +111,7 @@ python scripts\hpi_address_permutation_probe.py --start-server --port 1235 --res
 
 If reads become nonzero, reprogram the normal root image (`0x033328D9`) before
 resuming LCP/SIE/USB packet work. The currently programmed image is the
-UART manual HPI pin-sweep diagnostic (`0x0312EE0C`), which is not
+UART manual HPI edge-sweep diagnostic (`0x0314A683`), which is not
 Etherbone-reachable; use COM3 UART for this diagnostic or reprogram a
 known-good Ethernet image before running host-side scripts. Manual ctrl decode:
 bit0 `force_en`, bit1 `rd_n`, bit2 `wr_n`, bit3 `cs_n`, bits5:4 `addr`.
