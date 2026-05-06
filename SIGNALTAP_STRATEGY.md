@@ -99,6 +99,11 @@ This project now has enough firmware-side evidence to make the next USB debug st
   samples `0..19` showed reset-low (`INT0=0`, `INT1=1`, `DREQ=0`) and samples
   `20..29` showed released (`INT0=1`, `INT1=1`, `DREQ=0`); idle DATA stayed
   high throughout.
+- **Strap/clock checklist:** `docs\CY7C67200_STRAP_CLOCK_CHECKLIST.md` is now
+  the preferred no-analyzer continuation. It records the board-level checks for
+  CY `GPIO30/GPIO31` boot strap and EEPROM behavior, MAX II `12MHz` delivery to
+  `XTALIN`, and any non-CY driver or bus-hold condition on `OTG_DATA[15:0]`.
+  Run the HPI0/source-probe scripts again only after one of those facts changes.
 
 ## Debug Priorities
 
@@ -156,7 +161,10 @@ Interpretation:
 
 SignalTap should capture external pads, not only internal bridge state, but it
 must first pass the Ethernet gate. Until then, external logic analyzer capture
-or the weak-pullup diagnostic image is the safer route.
+or the weak-pullup diagnostic image is the safer route. With no external logic
+analyzer available, do not keep expanding SignalTap variants; the useful path is
+the strap/clock checklist plus HPI0 source/probe reruns after board-level
+changes.
 
 Signals:
 

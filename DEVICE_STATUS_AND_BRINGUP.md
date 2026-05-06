@@ -119,6 +119,12 @@
   selecting standalone/EEPROM behavior unless the board straps them otherwise.
   `docs\CY7C67200_BOARD_WIRING_FACTS.md` now records this as the next concrete
   board-level strap check.
+- 2026-05-06 strap/clock checklist:
+  `docs\CY7C67200_STRAP_CLOCK_CHECKLIST.md` records the concrete board-level
+  next step: verify actual CY `GPIO30/GPIO31` reset strap/EEPROM behavior,
+  confirm MAX II `12MHz` clock delivery to `XTALIN`, and check for any
+  board-level driver holding `OTG_DATA[15:0]` low during active reads. The
+  Cyclone IV platform does not currently expose those strap or clock nodes.
 
 ## Critical Findings
 1. CY7C67200 Host port power is supplied via a robust 5V rail, bypassing the internal 10mA charge pump.
@@ -136,15 +142,12 @@
    before trusting any USB evidence.
 3. Run the Beagle 12 packet analyzer with a simple known-good low/full-speed
    mouse or keyboard on the DE2-115 HOST path.
-4. Next HPI step without an external analyzer: inspect CY7C67200 reset/clock
-   and HPI boot-mode strap assumptions. Longer reset-low and post-release
-   settle windows did not recover reads, and mailbox writes are now proven at
-   the pins without producing readable STATUS/MAILBOX response. Reset-release
-   sideband sampling shows reset affects `INT0`, but no post-release sideband
-   activity appears. An exhaustive logical-port permutation sweep did not
-   recover readback, and live reset-release watching saw no `DREQ` or interrupt
-   pulse besides the expected reset-low/released `INT0` level change. The
-   weak-pullup contrast proves the FPGA input path reads released DATA high,
-   while active HPI reads drive or hold DATA low.
+4. Next HPI step without an external analyzer: follow
+   `docs\CY7C67200_STRAP_CLOCK_CHECKLIST.md`. Longer reset-low and
+   post-release settle windows did not recover reads, mailbox writes are proven
+   at the pins, reset-release sideband sampling shows only the expected `INT0`
+   level change, and exhaustive logical-port permutation did not recover
+   readback. The remaining target is actual CY `GPIO30/GPIO31` strap/EEPROM
+   behavior, MAX II `12MHz` clock delivery, and board-level DATA bus holds.
 5. Verify `SOF` (Start of Frame) packet generation.
 6. If enumeration stalls, compare descriptor packets with Terasic Host Demo packet logs to isolate firmware-level USB protocol issues.
