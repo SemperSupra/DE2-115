@@ -186,4 +186,36 @@ For USB, do not keep changing LCP or SIE firmware until HPI readback is proven. 
 - `OTG_RST_N`
 - `OTG_INT`
 
-For gigabit Ethernet, keep the work in the backlog until Ethernet low-speed and USB are both stable. Use `ETH0`/`ETX0` source-probe captures when that backlog item is deliberately resumed.
+## 2026-05-10: Unified Golden Image and Stuck A0 Hypothesis
+
+### Golden Unified Image Success
+After several attempts resulting in Ethernet regressions, a "Bank-Aware Surgical Build" was successfully created. 
+* By restoring the April 27th working Ethernet project (`f8e6b9b`) and manually inserting the HPI "Pulse Fix" (`rtl/cy7c67200_wb_bridge.v`), we bypassed the automated LiteX QSF generation.
+* We ensured physical pins were assigned to their correct electrical I/O Banks (Bank 7 at 2.5V for Ethernet/LEDs, Bank 6 at 3.3V for USB).
+* The resulting bitstream passed the Ethernet regression test (Ping and 512 CSR loops).
+
+### LCP Handshake Timeout & Stuck A0 Hypothesis
+With a stable communication baseline, the LCP Handshake (Rung 2 of the Bring-up Ladder) was attempted and **timed out**.
+* Exhaustive read/write sweeps on the HPI ports revealed that memory access is only possible on offsets `0x8` and `0xC`.
+* Ports `0x0` and `0x4` always return `0x0000` or ignore writes.
+* **Hypothesis:** The physical `OTG_ADDR[0]` line is stuck at `0` (or the CY7C67200 is ignoring it due to a bridging artifact). If `A0` is stuck at `0`, the host can only access binary addresses `00` (Data, offset `0x0`) and `10` (Address, offset `0x8`). It can NEVER access `01` (Mailbox, offset `0x4`) or `11` (Status, offset `0xC`). 
+* This explains why we can write to RAM using pseudo-mappings but cannot reach the Mailbox/Status registers to perform the LCP Handshake.
+
+### 2026-05-10: Detailed Hardware Aliasing Investigation
+
+Following the successful deployment of the Unified Golden Image (which fully restored Ethernet stability while retaining the HPI timing fixes), exhaustive software probes were run against the CY7C67200 HPI interface to unblock the LCP Handshake.
+
+1.  **LCP Handshake Timeout:** Sending `COMM_RESET` (0xFA50) on all possible port permutations failed to produce the `COMM_ACK` (0x0FED) response. The Status register remains completely unresponsive (returning `0x0000` or ghost data).
+2.  **Memory Aliasing Anomaly:** 
+    - The only reliable way to retain and read back data over the HPI bus is using offsets `0x8` and `0xC`.
+    - However, attempts to use `0xC` as the Address port and `0x8` as the Data port (which initially appeared to work for single writes) completely fail for sequential writes.
+    - When attempting to write an array of values (`0xDEAD`, `0xBEEF`, etc.) to incrementing addresses, the first value reads back correctly, but all subsequent values read back as garbage (e.g., `0xF3F3`).
+    - Furthermore, reading the internal chip registers (like the HW Revision at `0xC004` or CPU Flags at `0xC000`) returns ghost values from previous Host writes (e.g., returning `0x7777` or `0x0144` which were dummy values used in earlier tests).
+3.  **Catastrophic Address Aliasing (Wrap-around):** A targeted script (`test_c000_alias.py`) proved that the CY7C67200 is ignoring the upper address bits entirely.
+    - Writing `0xABCD` to `0x0000` causes a read from `0xC000` to return `0xABCD`.
+    - Writing `0x1234` to `0xC000` causes a read from `0x0000` to return `0x1234`.
+    - This means the internal CY7C67200 registers (like CPU Flags at `0xC000` and HW Revision at `0xC004`) are **physically unreachable**. The chip is treating the entire HPI interface as a small, wrapping block of RAM.
+4.  **Conclusion:** The DE2-115 HPI physical bus is experiencing severe aliasing. Because we cannot address the internal registers reliably, **both the LCP Handshake and the Direct RAM Boot strategies are currently blocked.** We cannot send commands to the Mailbox, nor can we address the CPU control registers to halt it for a manual boot.
+
+### Next Actions: Direct FPGA Interrogation (SignalTap)
+Since software probes over the Etherbone bridge are yielding aliased data, the next required step is a **SignalTap Hardware Capture**. We must compile a bitstream with a SignalTap logic analyzer attached directly to the `usb_otg_*` physical pins to observe exactly what is happening on the wires during these aliased reads/writes. This will definitively prove whether our address pins (`OTG_ADDR[1:0]`) and data pins (`OTG_DATA[15:0]`) are driving the correct values to the chip, or if the CY7C67200 itself is fundamentally broken/misconfigured in hardware.
