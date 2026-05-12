@@ -63,6 +63,7 @@ module cy7c67200_wb_bridge (
     wire [1:0] bus_hpi_addr = local_adr[1:0];
     wire [1:0] debug_index = local_adr[1:0];
     wire       hpi_access = active & ~debug_latched;
+    wire       hpi_strobe = hpi_access & (count >= 6'd1) & (count < (effective_access_cycles - 6'd1));
     wire [5:0] effective_access_cycles =
         (cfg_access_cycles == 6'd0) ? 6'd1 : cfg_access_cycles;
     wire [5:0] effective_turnaround_cycles =
@@ -79,8 +80,8 @@ module cy7c67200_wb_bridge (
         .iDATA({16'h0000, write_data}),
         .oDATA(cy_o_data),
         .iADDR(latched_adr[1:0]),
-        .iRD_N((hpi_access & ~latched_we) ? 1'b0 : 1'b1),
-        .iWR_N((hpi_access &  latched_we) ? 1'b0 : 1'b1),
+        .iRD_N((hpi_strobe & ~latched_we) ? 1'b0 : 1'b1),
+        .iWR_N((hpi_strobe &  latched_we) ? 1'b0 : 1'b1),
         .iCS_N(~hpi_access),
         .iRST_N(cy_i_rst_n),
         .iCLK(clk),
