@@ -1,0 +1,35 @@
+name: LiteX SoC Build
+
+on:
+  push:
+    branches: [ main, ethernet-baseline-shim ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build LiteX Environment
+        run: docker build -t litex-builder .
+
+      - name: Run HPI Simulation
+        run: |
+          docker run --rm litex-builder /bin/bash -c "apt-get update && apt-get install -y iverilog && iverilog -o tb.vvp test_hpi_sim.py cy7c67200_wb_bridge.v CY7C67200_IF.v altsource_probe.v && vvp tb.vvp"
+
+      - name: Build SoC (Gateware Generation)
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/workspace litex-builder /bin/bash -c "./scripts/build_soc.sh 1"
+
+      - name: Upload Software Headers
+        uses: actions/upload-artifact@v4
+        with:
+          name: soc-headers
+          path: build/terasic_de2_115/software/include/generated/
