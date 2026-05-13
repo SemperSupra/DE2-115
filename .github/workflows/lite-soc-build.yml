@@ -22,11 +22,11 @@ jobs:
 
       - name: Run HPI Simulation
         run: |
-          docker run --rm litex-builder /bin/bash -c "apt-get update && apt-get install -y iverilog && iverilog -o tb.vvp test_hpi_sim.py cy7c67200_wb_bridge.v CY7C67200_IF.v altsource_probe.v && vvp tb.vvp"
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace litex-builder /bin/bash -c "apt-get update && apt-get install -y iverilog && iverilog -o tb.vvp test_hpi_sim.py cy7c67200_wb_bridge.v CY7C67200_IF.v altsource_probe.v && vvp tb.vvp"
 
       - name: Build SoC (Gateware Generation)
         run: |
-          docker run --rm -v ${{ github.workspace }}:/workspace litex-builder /bin/bash -c "./scripts/build_soc.sh 1"
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace litex-builder /bin/bash -c "./scripts/build_soc.sh 1"
 
       - name: Upload Software Headers
         uses: actions/upload-artifact@v4
