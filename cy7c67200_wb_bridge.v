@@ -29,9 +29,9 @@ module cy7c67200_wb_bridge (
     localparam STATE_TURNAROUND = 2'd3;
 
 
-    localparam ACCESS_CYCLES_DEFAULT     = 6'd63;
-    localparam TURNAROUND_CYCLES_DEFAULT = 6'd8;
-    localparam SAMPLE_OFFSET_DEFAULT     = 6'd4;
+    localparam ACCESS_CYCLES_DEFAULT     = 6'd10;
+    localparam TURNAROUND_CYCLES_DEFAULT = 6'd2;
+    localparam SAMPLE_OFFSET_DEFAULT     = 6'd2;
 
     reg [1:0]  state = STATE_IDLE;
     reg [5:0]  count = 6'd0;
@@ -75,6 +75,11 @@ module cy7c67200_wb_bridge (
     wire        cy_o_int;
     wire [3:0] diag_source;
 
+    // NOTE: CY7C67200 memory architecture dictates at least 1 cycle of setup time
+    // for Address and Chip Select signals before asserting Read/Write strobes to
+    // prevent internal aliasing. Currently, this CY7C67200_IF module asserts
+    // iADDR, iCS_N, and strobes (iRD_N, iWR_N) concurrently.
+    // This is a known timing implication/risk from the original Terasic interface.
     CY7C67200_IF cy_if (
         .iDATA({16'h0000, write_data}),
         .oDATA(cy_o_data),

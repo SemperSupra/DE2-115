@@ -9,7 +9,7 @@
 #include "cy7c67200_scan.h"
 #include "cy7c67200_bringup.h"
 
-#define CY_BASE 0x82000000u
+#define CY_BASE USB_OTG_BASE
 
 #ifndef DE2_ETH_SPEED_MODE
 #define DE2_ETH_SPEED_MODE 0
