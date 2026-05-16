@@ -23,17 +23,19 @@ module cy7c67200_wb_bridge (
     output wire [191:0] dbg_probe
 );
 
-    localparam STATE_IDLE       = 2'd0;
-    localparam STATE_WAIT       = 2'd1;
-    localparam STATE_ACK        = 2'd2;
-    localparam STATE_TURNAROUND = 2'd3;
+    localparam STATE_IDLE       = 3'd0;
+    localparam STATE_SETUP      = 3'd1;
+    localparam STATE_WAIT       = 3'd2;
+    localparam STATE_ACK        = 3'd3;
+    localparam STATE_TURNAROUND = 3'd4;
 
 
     localparam ACCESS_CYCLES_DEFAULT     = 6'd63;
     localparam TURNAROUND_CYCLES_DEFAULT = 6'd8;
     localparam SAMPLE_OFFSET_DEFAULT     = 6'd4;
+    localparam SETUP_CYCLES              = 6'd2;
 
-    reg [1:0]  state = STATE_IDLE;
+    reg [2:0]  state = STATE_IDLE;
     reg [5:0]  count = 6'd0;
     reg [15:0] read_data = 16'd0;
     reg [15:0] sample_data = 16'd0;
@@ -62,6 +64,8 @@ module cy7c67200_wb_bridge (
     wire       debug_access = wb_access & (local_adr[13:6] != 8'd0);
     wire [1:0] bus_hpi_addr = local_adr[1:0];
     wire [1:0] debug_index = local_adr[1:0];
+    
+    wire       addr_active = (state == STATE_SETUP) || active;
     wire       hpi_access = active & ~debug_latched;
     wire       hpi_strobe = hpi_access & (count >= 6'd1) & (count < (effective_access_cycles - 6'd1));
     wire [5:0] effective_access_cycles =
@@ -79,7 +83,7 @@ module cy7c67200_wb_bridge (
     CY7C67200_IF cy_if (
         .iDATA({16'h0000, write_data}),
         .oDATA(cy_o_data),
-        .iADDR(latched_adr[1:0]),
+        .iADDR(addr_active ? latched_adr[1:0] : 2'b00),
         .iRD_N((hpi_strobe & ~latched_we) ? 1'b0 : 1'b1),
         .iWR_N((hpi_strobe &  latched_we) ? 1'b0 : 1'b1),
         .iCS_N(~hpi_access),
@@ -116,7 +120,7 @@ module cy7c67200_wb_bridge (
         effective_access_cycles, sample_threshold,
         diag_captured, diag_capture_match, diag_source, diag_in, hpi_int0, hpi_int1, hpi_dreq,
         hpi_access, rst, hpi_rst_n, wb_access, debug_access, active, debug_latched, latched_we, wb_we,
-        hpi_cs_n, hpi_rd_n, hpi_wr_n, hpi_addr, state, count, wb_ack,
+        hpi_cs_n, hpi_rd_n, hpi_wr_n, hpi_addr, {1'b0, state}, count, wb_ack,
         local_adr, write_data, read_data, sample_data, last_sample_data,
         cy_o_data[15:0], hpi_data, wb_dat_w[15:0]
     };
@@ -167,7 +171,7 @@ module cy7c67200_wb_bridge (
 
         if (hpi_access) begin
             last_ctrl <= {4'd0, diag_source[0], rst, hpi_rst_n, active, debug_latched, latched_we,
-                state, count, hpi_cs_n, hpi_rd_n, hpi_wr_n, hpi_addr,
+                {1'b0, state}, count, hpi_cs_n, hpi_rd_n, hpi_wr_n, hpi_addr,
                 1'b0, 1'b0, 1'b0, 2'b0, 4'd0};
             last_sample_data <= hpi_data;
             last_cy_data <= cy_o_data[15:0];
@@ -212,8 +216,17 @@ module cy7c67200_wb_bridge (
                     write_data    <= wb_dat_w[15:0];
                     latched_we    <= wb_we;
                     debug_latched <= 1'b0;
-                    active        <= 1'b1;
-                    state         <= STATE_WAIT;
+                    active        <= 1'b0;
+                    state         <= STATE_SETUP;
+                end
+            end
+
+            STATE_SETUP: begin
+                count <= count + 6'd1;
+                if (count == SETUP_CYCLES - 6'd1) begin
+                    count <= 6'd0;
+                    active <= 1'b1;
+                    state <= STATE_WAIT;
                 end
             end
 

@@ -1,81 +1,63 @@
-# DE2-115 Bring-up Findings & Orchestration Plan
+# DE2-115 Bring-up: Findings & Orchestration Plan
 
 ## 1. Findings & Current Status
 
-### **Validated Hardware (Verified on Board)**
-| Component | Status | Evidence |
-| :--- | :--- | :--- |
-| **VexRiscv SoC** | PASS | Serial console (COM3) provides stable diagnostics. |
-| **UART** | PASS | Bi-directional communication at 115200 baud. |
-| **Ethernet (P1)** | PASS | Forced-MII 10/100 Mbps ping and Etherbone CSR access stable. |
-| **7-Segment Display** | PASS | Fixed polarity in RTL; verified visual "0-7" patterns via webcam. |
-| **LEDs (Red/Green)** | PASS | Verified via Etherbone CSR stress tests. |
+### **Current Hardware Baseline**
+- **SoC Core:** VexRiscv stable, UART diagnostics working.
+- **Ethernet (P1):** 10/100 Mbps stable.
+- **7-Segment Display:** Polarity fixed (active-low).
+- **USB (CY7C67200):** Logical timing blocker. Readback returns `0x0000`.
 
-### **Critical Blocker**
-*   **USB CY7C67200 HPI Readback:** Firmware writes to the USB controller are acknowledged by the Wishbone bridge, but reads return `0x0000`. This prevents LCP initialization and HID enumeration.
+### **Latest Evidence (Verified via Board Swap)**
+- **Board B Failure:** Swapping to a second DE2-115 produced **identical failure modes** (0x0000 on readback).
+- **Logical Failure Confirmed:** Since two boards fail identically, the "Physical Stuck Pin" hypothesis is **REJECTED**.
+- **RTL Refactor:** Implemented `STATE_SETUP` (address setup time) and explicit data bus tri-stating.
 
 ---
 
-## 2. Orchestration Plan: Delegation & Execution
+## 2. Recommendations
 
-### **Task Allocation Strategy**
-*   **Google Jules:** Delegated for complex, cross-file refactoring and "logical" fixes where broad codebase understanding is needed.
-*   **GitHub Actions (CI):** Delegated for "blind" validation, such as linting, building the full LiteX SoC, and running unit tests that don't require the physical board.
-*   **Local Execution:** Reserved for hardware-in-the-loop (HIL) tasks: JTAG programming, webcam verification, and real-time SignalTap logic analysis.
+1.  **Regenerate SoC:** Force a top-level regeneration to ensure the 7-segment fix and HPI timing logic are fully integrated.
+2.  **Timing Validation:** Verify the new timing state machine on Board B.
+3.  **LCP Handshake:** Once readback is restored, proceed to load the USB host firmware.
 
-### **Orchestrated Task Matrix**
+---
+
+## 3. Orchestration Plan: Delegation & Execution
+
+### **Task Allocation**
+| Delegate | Responsibility | Tasks | Status |
+| :--- | :--- | :--- | :--- |
+| **Google Jules** | **RTL Refactoring** | Emergency timing refactor complete. | **DONE** |
+| **Local Agent** | **HIL / Build** | Regenerate SoC, Full Build, Program. | **PENDING REBOOT** |
+
+### **Execution Matrix**
 
 | Task ID | Description | Delegate | Type | Dependencies |
 | :--- | :--- | :--- | :--- | :--- |
-| **T1.1** | Refactor HPI Bridge for Timing Verif | **Jules** | Logical | None |
-| **T1.2** | Add HPI Unit Test (Migen/Sim) | **Jules** | Logical | T1.1 |
-| **T2.1** | Build SoC with Refactored Bridge | **Action** | CI | T1.1 |
-| **T2.2** | Run LiteX Simulation CI | **Action** | CI | T1.2 |
-| **T3.1** | Program Board with SignalTap SOF | **Local** | HIL | T2.1 |
-| **T3.2** | Capture External HPI Pins | **Local** | HIL | T3.1 |
-| **T3.3** | Validate Readback Fix | **Local** | HIL | T3.2 |
+| **T4.1** | Regenerate SoC (7seg + HPI fixes) | **Local** | Logic | None |
+| **T4.2** | Full Quartus Compile | **Local** | Build | T4.1 |
+| **T4.3** | Verify HPI Readback (0x0011) | **Local** | HIL | T4.2 |
+| **T5.1** | Initialize USB Host Stack | **Local** | FW | T4.3 |
 
 ---
 
-## 3. Sequencing Diagram (Mermaid)
+## 4. Sequencing Diagram (Mermaid)
 
 ```mermaid
 sequenceDiagram
-    participant J as Google Jules
-    participant A as GitHub Actions (CI)
-    participant L as Local (Hardware Agent)
+    participant J as Google Jules (Logic)
+    participant L as Local (Hardware/HIL)
 
-    Note over J, L: Phase 1: Bridge Refactoring & Verification
-    L->>J: Start /jules "Fix HPI Read Timing & Add Sim"
-    J->>J: Refactor cy7c67200_wb_bridge.v
-    J->>J: Create test_hpi_sim.py
-    J-->>L: Commit & Push changes
+    Note over J, L: Logic Pivot (May 16)
+    L->>J: Emergency Refactor: Timing Fix
+    J->>J: Implement STATE_SETUP & Tri-state
+    J-->>L: Pull RTL Patch
+    L->>L: Re-apply 7-Segment Fix
 
-    Note over J, L: Phase 2: Remote Validation
-    L->>A: Trigger Build & Test Workflow
-    A->>A: build_soc.sh (Verify bitstream generation)
-    A->>A: pytest test_hpi_sim.py (Verify timing logic)
-    A-->>L: PASS / FAIL Report
-
-    Note over J, L: Phase 3: Hardware Integration
-    L->>L: download_artifact (new .sof)
-    L->>L: load_bitstream.ps1
-    L->>L: run_capture.tcl (SignalTap)
-    L->>L: agentwebcam (Verify status LEDs)
+    Note over L: Next Steps (After Reboot)
+    L->>L: scripts/build_soc.sh 1
+    L->>L: quartus_sh --flow compile
+    L->>L: Program Board B
+    L->>L: scripts/trigger_hpi.py (Verify 0x0011)
 ```
-
----
-
-## 4. Recommendations & Recommendations
-
-1.  **Immediate Step:** Initiate a Jules task to harden the `cy7c67200_wb_bridge.v`. The logic likely lacks enough "read-hold" time for the asynchronous CY7C67200 bus.
-2.  **Parallel Track:** While Jules works on the RTL, a GitHub Action can be configured to automate the LiteX build process, reducing local build times.
-3.  **SignalTap Requirement:** The next local build **must** include the HPI pins in a SignalTap instance. I have already verified that the 2026-05-12 image is stable; we will use its configuration as the template.
-
----
-
-## 5. Execution Orchestration
-
-1.  **[In Progress]** Invoking `/jules` for RTL Refactoring.
-2.  **[Scheduled]** Configuring GitHub CLI for build status monitoring.
-3.  **[Scheduled]** Performing local SignalTap capture once the SOF is ready.

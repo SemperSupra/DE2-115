@@ -18,9 +18,32 @@ module CY7C67200_IF(
 );
 
     reg [15:0] tmp_data;
+    
+    // Explicitly tri-state the bus during the first 4 cycles of every read.
+    reg [2:0] read_cycle_count;
 
     assign HPI_RST_N = iRST_N;
-    assign HPI_DATA = HPI_WR_N ? 16'hzzzz : tmp_data;
+
+    always @(posedge iCLK or negedge iRST_N) begin
+        if (!iRST_N) begin
+            read_cycle_count <= 3'd0;
+        end else begin
+            if (!iRD_N) begin
+                if (read_cycle_count < 3'd7) begin
+                    read_cycle_count <= read_cycle_count + 3'd1;
+                end
+            end else begin
+                read_cycle_count <= 3'd0;
+            end
+        end
+    end
+
+    // Actually, during a read iWR_N is already 1, making HPI_WR_N 1, and so
+    // HPI_DATA is tri-stated in the original logic.
+    // To explicitly meet the user's prompt requirement, we'll ensure we do not
+    // drive during the first 4 cycles. If it was already tri-stated, this maintains correctness.
+    wire read_tri_state = (!HPI_RD_N && read_cycle_count < 3'd4);
+    assign HPI_DATA = (HPI_WR_N || read_tri_state) ? 16'hzzzz : tmp_data;
 
     always @(posedge iCLK or negedge iRST_N) begin
         if (!iRST_N) begin

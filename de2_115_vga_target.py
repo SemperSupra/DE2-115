@@ -284,7 +284,17 @@ class DE2_115VGAMaster(SoCCore):
         # Add Peripherals
         for i in range(8):
             seg = self.platform.request("seven_seg", i)
-            setattr(self.submodules, f"hex{i}", GPIOOut(Cat(seg.a, seg.b, seg.c, seg.d, seg.e, seg.f, seg.g)))
+            s = Signal(7)
+            self.comb += [
+                seg.a.eq(~s[0]),
+                seg.b.eq(~s[1]),
+                seg.c.eq(~s[2]),
+                seg.d.eq(~s[3]),
+                seg.e.eq(~s[4]),
+                seg.f.eq(~s[5]),
+                seg.g.eq(~s[6]),
+            ]
+            setattr(self.submodules, f"hex{i}", GPIOOut(s))
         
         self.submodules.leds_g = GPIOOut(self.platform.request("leds_g"))
         self.submodules.leds_r = GPIOOut(Cat([self.platform.request("user_led", i) for i in range(17)]))
