@@ -77,9 +77,9 @@ Successfully achieved local build parity with the known-good validation image. T
 ## 7. 2026-05-17 Delegation Results
 - **Google Jules:** Review session `14997796971249417694` was opened for the
   narrow pad-capture RTL/script review. It was still running at handoff time.
-- **GitHub Actions:** Static Checks run `25988084275` passed after fixing the
+- **GitHub Actions:** Static Checks run `25988340470` passed after fixing the
   stale orchestration grep and adding manual dispatch. LiteX SoC Build run
-  `25988084379` passed after fixing the HPI simulation command to compile
+  `25988340381` passed after fixing the HPI simulation command to compile
   `tb.v` instead of `test_hpi_sim.py`.
 - **Local-only hardware:** Quartus compile, programming, Ethernet gate, HPI pad
   snapshot, and ladder probe completed locally because they require Quartus

@@ -121,7 +121,7 @@ These must be sequential:
 | Python syntax check for pad script | Local | Done |
 | HPI bridge simulation in Docker | Local | Done |
 | Jules focused review | Jules | Session `14997796971249417694` created; still running at handoff |
-| GitHub Actions delegation | Local/CI | Static Checks `25988084275` passed; LiteX SoC Build `25988084379` passed |
+| GitHub Actions delegation | Local/CI | Static Checks `25988340470` passed; LiteX SoC Build `25988340381` passed |
 | Quartus compile of candidate pad-capture image | Local | Done, checksum `0x033626D0` |
 | Hardware program/regression/snapshot | Local bench | Done on first board; canonical read still samples zero |
 | Second-board confirmation or Terasic demo comparison | Local bench | Next sequential task |
