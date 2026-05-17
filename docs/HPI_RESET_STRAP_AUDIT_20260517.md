@@ -73,17 +73,31 @@ Date: 2026-05-17
   `artifacts/de2_115_vga_platform_hpi_pad_capture_033626D0_20260517.sof`
   after this attempt.
 
-## Environment Requirement To Finish Demo
+## Host-Native Demo Execution
 
-To complete the Terasic host demo without direct WSL, use one of these paths:
+- The host-side path now works without WSL. Use
+  `scripts/run_terasic_usb_host_demo_host.ps1`.
+- The script programs the Terasic SOF, converts the Terasic ELF to SREC with
+  Windows `nios2-elf-objcopy.exe`, then downloads/verifies/starts the SREC with
+  Windows `nios2-gdb-server.exe`.
+- Verified result: the Nios application downloaded 80 KiB, verified OK, and
+  started at `0x000001B4`.
+- Short JTAG UART attach produced no application text.
+- Beagle capture during the running Terasic demo is stored in
+  `artifacts/usb-hpi-runs/20260517-173028/beagle12/capture_20260517-173031.txt`.
+  It shows connect/reset state changes but no SOF or SETUP packets.
+- User confirmed the actual live topology is
+  `DE2-115 HOST USB-A -> Beagle 12 -> USB2KVM USB-A`, with HID events injected
+  from the PC into the KVM2USB control interface.
+- `scripts/inject_agent_kvm_hid.py` sends direct keyboard, touch, and relative
+  mouse HID reports without using the video/DirectShow part of the KVM SDK.
+- Capture
+  `artifacts/usb-hpi-runs/20260517-180923/beagle12/capture_20260517-180935.txt`
+  was taken while injecting KVM2USB HID events. The Beagle still captured only
+  repeated target connect/reset transitions and no SOF or SETUP tokens.
 
-1. Build or provide a container image with native Linux Intel Quartus/Nios tools
-   and pass the USB-Blaster device through to the container.
-2. Use the host Windows Nios tools directly for `nios2-download` and
-   `nios2-terminal`.
-
-The current Docker setup is sufficient for LiteX/SoC builds, but not sufficient
-for the Terasic Nios ELF download.
+The current Docker setup remains useful for LiteX/SoC builds, but hardware
+JTAG/Nios demo execution should use the host-native script.
 
 ## Interpretation
 
@@ -110,8 +124,10 @@ The next useful local boundary is schematic and demo comparison:
 1. Identify CY7C67200 GPIO30/GPIO31 boot strap nets, DACK/sideband nets,
    VBUS/host power enable, and any jumpers or solder options in the DE2-115
    schematic/manual.
-2. Re-run the Terasic USB host demo only after the Nios ELF download path is
-   available, with explicit board-power/jumper/VBUS observations recorded.
+2. Re-run the Terasic USB host demo with the host-native script and explicit
+   board-power/jumper/VBUS observations recorded. The current AgentUSB2KVM
+   topology is proven to inject HID reports from the PC side, but the DE2-115
+   host still does not enumerate the downstream device.
 3. If the Terasic demo still emits no SOF/SETUP under confirmed power/strap
    conditions, classify the DE2-115 CY7C67200 host path as systemically blocked
    for this project and choose whether to continue with HPI device-mode-only

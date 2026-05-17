@@ -27,17 +27,26 @@
       `fast`, and `slow` timing after a longer reset dwell (`0.5 s` low,
       `2.0 s` high). Spec and slow pad captures also sampled read data as
       `0x0000`.
-- **Terasic USB Host Demo:** **SOF programmed, ELF step blocked**.
+- **Terasic USB Host Demo:** **Host-native loader works; demo packet-silent**.
     - Board A accepted
       `DE2_115_demonstrations\DE2_115_NIOS_HOST_MOUSE_VGA\DE2_115_NIOS_HOST_MOUSE_VGA.sof`
       over USB-Blaster.
-    - The reference demo requires a second Nios application download:
-      `nios2-download DE2_115_NIOS_HOST_MOUSE_VGA.elf -r -g`, followed by
-      `nios2-terminal`.
-    - Per user direction, the ELF step was attempted in Docker instead of WSL.
-      The existing `litex_builder` container sees the mounted Windows Nios tree
-      and ELF/JDI, but lacks USB/JTAG device visibility and native Linux Nios
-      helper binaries. The actual download path fails before hardware access.
+    - `scripts\run_terasic_usb_host_demo_host.ps1` replaces the missing
+      WSL-backed `nios2-download` step with a Windows-native flow:
+      ELF to SREC via `nios2-elf-objcopy.exe`, then reset/download/verify/go
+      through `nios2-gdb-server.exe`.
+    - The loader downloaded 80 KiB, verified OK, and started the Nios CPU at
+      `0x000001B4`.
+    - Beagle capture
+      `artifacts\usb-hpi-runs\20260517-173028\beagle12\capture_20260517-173031.txt`
+      saw connect/reset state changes but no SOF or SETUP packets.
+    - User confirmed actual topology:
+      `DE2-115 HOST USB-A -> Beagle 12 -> USB2KVM USB-A`, with PC-side HID
+      injection through AgentUSB2KVM/KVM2USB.
+    - `scripts\inject_agent_kvm_hid.py` successfully sends keyboard, touch,
+      and relative mouse reports to KVM2USB. Beagle capture
+      `artifacts\usb-hpi-runs\20260517-180923\beagle12\capture_20260517-180935.txt`
+      still showed repeated target connect/reset cycles and no SOF/SETUP.
     - Board A has been restored to the candidate pad-capture image checksum
       `0x033626D0`.
 
@@ -62,18 +71,17 @@
     CLI.
 2.  **Terasic demo or protocol review:** Second-board confirmation is complete:
     board A matches board B at the canonical readback failure. The next useful
-    boundary is completing the Terasic demo ELF download path, then comparing
-    against the known-good CY7C67200 USB host demo with explicit
-    board-power/jumper/VBUS observations, plus auditing the HPI
-    reset/strap/protocol assumptions.
+    boundary is no longer the ELF download path or HID injection path; it is
+    physical USB host-power, jumper/VBUS, and CY7C67200 board-level conditions
+    because the Terasic reference design now runs and AgentUSB2KVM injects
+    reports, but the bus remains packet-silent.
 3.  **Do not run LCP:** Rung 1 canonical memory write/read is not proven.
 4.  **Board swaps:** Four DE2-115 boards are available. Swap only after the
     same candidate SOF has a clear pass/fail on the first board.
 5.  **Delegation boundary:** GitHub Actions can run Static Checks and LiteX SoC
-    Build; Jules can review docs/RTL/scripts; Docker can build LiteX/SoC but
-    cannot currently execute the Terasic Nios ELF download; Quartus
-    programming, Ethernet, HPI captures, and Terasic demo observations remain
-    local-only.
+    Build; Jules can review docs/RTL/scripts; Docker can build LiteX/SoC;
+    Quartus programming, Ethernet, HPI captures, and Terasic demo observations
+    remain local-only.
 
 ## Environment
 - **Branch:** `ethernet-baseline-shim`
@@ -82,5 +90,5 @@
 - **UART:** COM3, 115200.
 - **Latest checkpoints:** `5426c17` records board-A confirmation; `372a84e`
   records the reset/timing sweep; `bc6510e` documents the active
-  schematic/strap/VBUS orchestration phase. This handoff now also records the
-  Terasic SOF/ELF/container blocker.
+  schematic/strap/VBUS orchestration phase. Commit `24cbb11` records the
+  earlier container blocker; the current update records the host-native fix.

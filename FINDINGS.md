@@ -179,3 +179,33 @@ Successfully achieved local build parity with the known-good validation image. T
   we need either native Linux Intel/Nios tools in the container plus USB-Blaster
   passthrough, or a host-side Windows Nios download flow. This is an execution
   environment blocker, not new evidence that the CY7C67200 host path works.
+
+## 12. 2026-05-17 Host-Native Terasic Demo Loader
+- **Resolution:** The Terasic demo now runs without WSL. The host-side flow is:
+  program the Terasic SOF, convert the ELF to SREC with Windows
+  `nios2-elf-objcopy.exe`, then use Windows-native `nios2-gdb-server.exe` to
+  reset, download, verify, and start the Nios application.
+- **Script:** `scripts/run_terasic_usb_host_demo_host.ps1`.
+- **Observed loader result:** `nios2-gdb-server.exe` downloaded 80 KiB,
+  verified OK, and started the processor at `0x000001B4`.
+- **JTAG UART:** `nios2-terminal.exe` attached to the JTAG UART, but no
+  application text was printed during the short capture window. The terminal can
+  produce host-console `ReadFile` warnings when run with `--quit-after`; this
+  does not invalidate the successful SREC download/start.
+- **Beagle result:** Evidence bundle
+  `artifacts/usb-hpi-runs/20260517-173028` captured the Terasic demo run. The
+  Beagle saw `HOST_DISCON`, `HOST_CONNECT`, `TGT_DISCON; RESET`, and
+  `TGT_CONNECT/UNRST`, but still no SOF or SETUP packets.
+- **Corrected topology:** User confirmed the live topology is
+  `DE2-115 HOST USB-A -> Beagle 12 -> USB2KVM USB-A`, with the PC controlling
+  the KVM2USB HID injection interface.
+- **HID injection result:** `scripts/inject_agent_kvm_hid.py` can send
+  keyboard, touch, and relative mouse reports to the KVM2USB. Evidence bundle
+  `artifacts/usb-hpi-runs/20260517-180923` captured this while the Terasic demo
+  was running. The Beagle still saw repeated `TGT_DISCON; RESET` /
+  `TGT_CONNECT/UNRST` cycles, roughly every 3 seconds, and no SOF or SETUP
+  packets.
+- **Current interpretation:** The execution-environment blocker is cleared. The
+  known-good Terasic reference design still does not emit host traffic in the
+  observed setup, so the next boundary is physical USB host-power/topology or
+  board-level CY7C67200 conditions, not the LiteX HPI bridge.

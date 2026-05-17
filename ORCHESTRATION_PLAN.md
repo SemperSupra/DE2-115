@@ -44,7 +44,7 @@ Date: 2026-05-17
 | Ethernet regression | Local bench | Requires programmed board and network path to `192.168.178.50`. |
 | HPI pad snapshot / ladder runs | Local bench | Requires programmed pad-capture SOF and Etherbone. |
 | Terasic demo rerun with jumper/VBUS observations | Local bench | Requires physical board, USB path, and observation of board power/jumper state. |
-| Terasic Nios ELF download | Local bench / special container | Sequential after SOF programming. The current Docker image is blocked because it has no USB/JTAG device visibility and only mounts Windows Nios helper binaries. |
+| Terasic Nios application download | Local Windows host | Sequential after SOF programming. Use `scripts/run_terasic_usb_host_demo_host.ps1`; it converts ELF to SREC and downloads with `nios2-gdb-server.exe` without WSL. |
 | Board swaps across the four DE2-115 boards | Local bench | Physical operation; board A and board B already match at the failure boundary. |
 
 ## Dependency Graph
@@ -119,8 +119,8 @@ These must be sequential:
 - Ethernet regression must wait for programming when using the LiteX image.
 - HPI pad snapshot must wait for Ethernet/Etherbone passing on the candidate image.
 - Terasic demo rerun must wait for schematic/jumper/VBUS observation criteria.
-- Terasic Nios ELF download must wait for a usable JTAG/Nios execution
-  environment. The current Docker container is not enough.
+- Terasic Nios application download must wait for the Terasic SOF to be loaded,
+  but no longer depends on WSL.
 - LCP/SIE/HID work must wait for canonical HPI Rung 1 passing.
 
 ## Execution State
@@ -141,8 +141,10 @@ These must be sequential:
 | Jules schematic/strap/VBUS review | Jules | Session `3912795874550261687` completed; RTL patch proposal rejected as stale/partial, review kept as advisory |
 | GitHub Actions delegation for branch head | Local/CI | Static Checks and LiteX SoC Build pass after each pushed checkpoint |
 | Terasic SOF programming | Local bench | Done on board A; SOF accepted over USB-Blaster |
-| Terasic Nios ELF download | Local bench/container | Blocked in current Docker image: no USB/JTAG passthrough and mounted Nios helper tools are Windows binaries |
-| Terasic demo and schematic/VBUS/strap comparison | Local bench | Waiting on usable Nios ELF download path |
+| Terasic Nios application download | Local Windows host | Done without WSL via SREC plus `nios2-gdb-server.exe`; 80 KiB downloaded and verified OK |
+| AgentUSB2KVM HID injection | Local bench | Done; direct HID reports sent through KVM2USB keyboard/touch/mouse interfaces |
+| Terasic Beagle observation | Local bench | Done; repeated downstream connect/reset cycles seen, no SOF/SETUP packets even during HID injection |
+| Terasic demo and schematic/VBUS/strap comparison | Local bench | Waiting on explicit physical USB host-power/jumper/VBUS observations |
 
 ## Recommendations
 
@@ -156,5 +158,7 @@ These must be sequential:
 5. Reset/timing sweeps did not rescue canonical HPI; prioritize schematic,
    VBUS, jumper, and boot-strap evidence before any more RTL churn.
 6. Do not resume LCP until canonical memory write/read returns expected data.
-7. Do not treat "Terasic SOF programmed" as a completed host-demo run; the
-   prebuilt demo also needs the Nios ELF download and terminal step.
+7. Treat the Terasic reference design and AgentUSB2KVM injection as runnable
+   now, but still packet-silent in the observed setup. The next test variable
+   is physical USB host power/jumpers/VBUS, not the software loader or HID
+   injection path.
