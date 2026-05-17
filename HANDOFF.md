@@ -1,12 +1,13 @@
-# Handoff Report: 2026-05-17 (Post-HPI Pad Snapshot)
+# Handoff Report: 2026-05-17 (Board-A HPI Confirmation)
 
 ## Current Status
-- **Board Life:** **RESTORED on candidate pad-capture image**. The live board is
-  programmed with checksum `0x033626D0` and pings at `192.168.178.50`.
+- **Board Life:** **RESTORED on board A with candidate pad-capture image**. Board
+  B was swapped out, board A was swapped in, and board A is programmed with
+  checksum `0x033626D0` and pings at `192.168.178.50`.
 - **Candidate image:** `artifacts\de2_115_vga_platform_hpi_pad_capture_033626D0_20260517.sof`.
 - **Etherbone:** **FUNCTIONAL on candidate image**.
   `scripts\ethernet_low_speed_test.py --ping-count 20 --csr-loops 128 --bind-port 1235`
-  passed and read identifier prefix `LiteX VGA Test SoC on DE`.
+  passed on board A and read identifier prefix `LiteX VGA Test SoC on DE`.
 - **UART:** **FUNCTIONAL**. BIOS heartbeat logs are visible on COM3 at 115200 baud.
 - **USB HPI Debug:** **Rung 1 still failed**.
     - Fast canonical probe (`ACCESS_CYCLES=6`) returns all `0x0000`.
@@ -18,6 +19,10 @@
     - On-FPGA pad snapshot confirms canonical data write drives
       `hpi_data=0x55aa` at `addr=0`, but canonical data read samples
       `hpi_data=0x0000` at `addr=0` with `CS_N=0`, `RD_N=0`, `WR_N=1`.
+    - Board A reproduced the same canonical pad snapshot as board B:
+      write data is visible at the FPGA pad-facing bus, while read data remains
+      `0x0000`. The legacy/index-15 alias changed to `0xcfcf`, confirming it is
+      not valid memory readback.
 
 ## Key Changes
 - **ROM Size:** Permanently increased to 64 KiB (`0x10000`) to fit BIOS + firmware.
@@ -33,16 +38,17 @@
 ## Next Steps for Codex CLI
 1.  **Review Jules feedback:** Jules session `14997796971249417694` is reviewing
     the narrow pad-capture implementation and was still running at handoff.
-2.  **Second-board confirmation or Terasic demo:** The next useful boundary is
-    either running this same `0x033626D0` candidate on a second DE2-115 board or
-    comparing against a known-good Terasic CY7C67200 USB demo bitstream.
+2.  **Terasic demo or protocol review:** Second-board confirmation is complete:
+    board A matches board B at the canonical readback failure. The next useful
+    boundary is comparing against a known-good Terasic CY7C67200 USB demo
+    bitstream or auditing the HPI reset/strap/protocol assumptions.
 3.  **Do not run LCP:** Rung 1 canonical memory write/read is not proven.
 4.  **Board swaps:** Four DE2-115 boards are available. Swap only after the
     same candidate SOF has a clear pass/fail on the first board.
 
 ## Environment
 - **Branch:** `ethernet-baseline-shim`
-- **Live image:** `artifacts\de2_115_vga_platform_hpi_pad_capture_033626D0_20260517.sof`
+- **Live image on board A:** `artifacts\de2_115_vga_platform_hpi_pad_capture_033626D0_20260517.sof`
 - **Port:** `litex_server` target UDP 1234; host bind port 1235 for tests.
 - **UART:** COM3, 115200.
 - **Latest commits:** `f21b996` adds pad snapshots/orchestration; `359c92e`

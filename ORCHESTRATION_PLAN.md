@@ -20,6 +20,9 @@ Date: 2026-05-17
   cycle. The pad snapshot now additionally proves canonical writes drive the
   FPGA pad-facing data bus (`0x55aa`) and canonical reads still sample
   `0x0000`.
+- Board A was swapped in for board B and reproduced the same canonical
+  readback failure using the same `0x033626D0` SOF. The legacy/index-15 alias
+  changed to `0xcfcf`, reinforcing that the alias is not valid HPI memory data.
 
 ## Delegation Model
 
@@ -49,10 +52,9 @@ graph TD
     H --> I[Run HPI pad snapshot over Etherbone]
     I --> J{Canonical HPI read returns expected data?}
     J -- yes --> K[Proceed to LCP / COMM_ACK ladder]
-    J -- no --> L[Compare against Terasic demo or swap board]
-    L --> M{Same failure on second board?}
-    M -- yes --> N[Protocol / RTL root-cause path]
-    M -- no --> O[Board-specific CY7C67200 / assembly issue]
+    J -- no --> L[Board A reproduces board B failure]
+    L --> M[Compare against Terasic demo]
+    M --> N[Protocol / reset / strap root-cause path]
 ```
 
 ## Sequencing Diagram
@@ -85,8 +87,8 @@ sequenceDiagram
         Local->>Board: Restore validated SOF
         Local->>Local: Fix build before USB testing
     end
-    alt Pad snapshot shows design-level failure on current board
-        Local->>Board: Repeat on second board only if needed
+    alt Pad snapshot shows design-level failure on two boards
+        Local->>Board: Compare against Terasic demo behavior
     else Pad snapshot passes Rung 1
         Local->>Board: Resume LCP/COMM_ACK ladder
     end
@@ -123,8 +125,9 @@ These must be sequential:
 | Jules focused review | Jules | Session `14997796971249417694` created; still running at handoff |
 | GitHub Actions delegation | Local/CI | Static Checks and LiteX SoC Build pass under manual dispatch |
 | Quartus compile of candidate pad-capture image | Local | Done, checksum `0x033626D0` |
-| Hardware program/regression/snapshot | Local bench | Done on first board; canonical read still samples zero |
-| Second-board confirmation or Terasic demo comparison | Local bench | Next sequential task |
+| Hardware program/regression/snapshot | Local bench | Done on board B and board A; canonical read still samples zero |
+| Second-board confirmation | Local bench | Done; board A matches board B |
+| Terasic demo comparison | Local bench | Next sequential task |
 
 ## Recommendations
 
@@ -133,7 +136,6 @@ These must be sequential:
    way to confirm what the FPGA pad-facing inputs see.
 3. If the candidate pad-capture image fails Ethernet, stop USB work and fix the
    current build reproducibility problem first.
-4. If pad snapshots show the same canonical read failure on two boards, treat it
-   as a design/protocol issue. If one board differs, isolate the board-specific
-   CY7C67200 path.
+4. Pad snapshots now show the same canonical read failure on two boards, so
+   treat the next phase as a design/protocol/reset/strap issue.
 5. Do not resume LCP until canonical memory write/read returns expected data.

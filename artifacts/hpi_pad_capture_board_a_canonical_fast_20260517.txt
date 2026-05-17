@@ -1,0 +1,4 @@
+HPI_PAD_CAPTURE map=canonical timing=fast target=0x1000 write=0x55aa read0=0x0000
+ADDR_WRITE: raw=0xfaa0800200000000 captured=1 we=1 addr=2 cs_n=0 rd_n=1 wr_n=0 count=2 local=0x0002 wb=0x0000 hpi_data=0x0000
+DATA_WRITE: raw=0xfa20800055aa55aa captured=1 we=1 addr=0 cs_n=0 rd_n=1 wr_n=0 count=2 local=0x0000 wb=0x55aa hpi_data=0x55aa
+DATA_READ: raw=0x9921000000000000 captured=1 we=0 addr=0 cs_n=0 rd_n=0 wr_n=1 count=4 local=0x0000 wb=0x0000 hpi_data=0x0000

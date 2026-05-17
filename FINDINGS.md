@@ -70,9 +70,9 @@ Successfully achieved local build parity with the known-good validation image. T
 - **Follow-up ladder:** The same candidate image still failed canonical Rung 1.
   The legacy/index-15 map returned a stable nonzero alias (`0xbfbf` in this
   placement), not the expected RAM words.
-- **Next boundary:** Compare reset/strap/protocol assumptions against a known
-  Terasic USB demo or repeat this same candidate image on a second DE2-115
-  board. If the second board matches, continue as a design/protocol issue.
+- **Next boundary:** Second-board confirmation is now complete in Section 8.
+  Continue as a design/protocol/reset/strap issue and compare against a known
+  Terasic USB demo before any LCP work.
 
 ## 7. 2026-05-17 Delegation Results
 - **Google Jules:** Review session `14997796971249417694` was opened for the
@@ -83,3 +83,25 @@ Successfully achieved local build parity with the known-good validation image. T
 - **Local-only hardware:** Quartus compile, programming, Ethernet gate, HPI pad
   snapshot, and ladder probe completed locally because they require Quartus
   and/or physical DE2-115 hardware.
+
+## 8. 2026-05-17 Board-A Swap Result
+- **Action:** Board B was swapped out and board A was swapped in. The same
+  candidate SOF, `artifacts/de2_115_vga_platform_hpi_pad_capture_033626D0_20260517.sof`,
+  was programmed directly over USB-Blaster.
+- **Programming evidence:** Quartus programmer accepted the image for
+  `EP4CE115F29@1` with checksum `0x033626D0`.
+- **Ethernet gate:** Board A passed
+  `python scripts/ethernet_low_speed_test.py --ping-count 20 --csr-loops 128 --bind-port 1235`.
+  Ping had one initial timeout (`19/20` replies), but Etherbone CSR stress passed
+  all `128` loops and the script reported `ETHERNET_LOW_SPEED_TEST_PASS`.
+- **Canonical fast pad capture:** Board A matched board B. Address write and
+  data write are visible at the FPGA pad-facing bus, including
+  `hpi_data=0x55aa` for the data write. Canonical read still samples
+  `hpi_data=0x0000` with `CS_N=0`, `RD_N=0`, `WR_N=1`.
+- **Follow-up ladder:** Board A still failed canonical Rung 1. The
+  `legacy-data2-addr3` map returned stable `0xcfcf`, which differs from the
+  earlier board-B alias but still does not match expected RAM words.
+- **Interpretation:** The same failure on two boards argues against a single
+  damaged CY7C67200 or board assembly issue. Treat the next boundary as a
+  design/protocol/reset/strap comparison against the Terasic USB demo, not as
+  more LCP work.

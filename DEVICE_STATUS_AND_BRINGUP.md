@@ -41,8 +41,8 @@ integration.
 | Ethernet Port 0 | Not started | Current target is Port 1; PHY16 is treated as absent/floating in current evidence. | Audit cable/PHY address/pins, then repeat MDIO, link, ping, and Etherbone tests independently. |
 | Etherbone remote CSR access | Validated | Identifier read and LED CSR stress pass through host `litex_server` bind port `1235`. | Keep as host-driven test backbone for remaining devices. |
 | SD card | Integrated, unvalidated | `add_sdcard()` is present; docs identify SD as next high-value device after USB/Ethernet confidence. | Add block read/write self-test, CID/CSD read, multi-block transfer, and FAT/FatFS smoke test. |
-| USB CY7C67200 HPI write path | Partially working | FPGA debug records write data such as `0x1234`; 2026-05-17 pad snapshot on checksum `0x033626D0` captured canonical data write with `hpi_data=0x55aa`, `addr=0`, `CS_N=0`, `WR_N=0`. | Preserve current bridge/register ordering; do not change LCP/SIE flow until readback works. |
-| USB CY7C67200 HPI read path | Blocked | CY registers and memory read as `0x0000`; source/probe shows valid read strobes; 2026-05-17 pad snapshot captured canonical read with `addr=0`, `CS_N=0`, `RD_N=0`, `WR_N=1`, `hpi_data=0x0000`. | Compare with Terasic USB demo or swap among the four available DE2-115 boards using the same `0x033626D0` candidate image. |
+| USB CY7C67200 HPI write path | Partially working | FPGA debug records write data such as `0x1234`; 2026-05-17 pad snapshot on checksum `0x033626D0` captured canonical data write with `hpi_data=0x55aa`, `addr=0`, `CS_N=0`, `WR_N=0` on both board B and board A. | Preserve current bridge/register ordering; do not change LCP/SIE flow until readback works. |
+| USB CY7C67200 HPI read path | Blocked | CY registers and memory read as `0x0000`; source/probe shows valid read strobes; 2026-05-17 pad snapshot captured canonical read with `addr=0`, `CS_N=0`, `RD_N=0`, `WR_N=1`, `hpi_data=0x0000`. Board A reproduced the same failure after board B was swapped out. | Compare with the Terasic USB demo and audit HPI reset/strap/protocol assumptions before any LCP/SIE work. |
 | USB host mode Type-A | Blocked | Beagle USB 12 is inline between KVM2USB and the DE2-115 HOST port; passive captures show no packets without a fresh reconnect event. | Fix HPI readback, then LCP load, `COMM_ACK`, `SIE1_INIT`, reset, connect message, and HID boot protocol. Run Beagle captures while physically reconnecting the downstream path. |
 | USB device mode Type-B | Not started / blocked | User wants device mode, but HPI/CY readback blocks all CY7C67200 functional modes. | After HPI is fixed, bring up device demo path separately from host mode and test enumeration from PC. |
 | Audio codec | Not started | No current codec/I2C/audio data path evidence. | Audit codec pins and I2C control, add register read/write where possible, then line-out tone and line-in loopback tests. |
@@ -93,8 +93,8 @@ python scripts\ethernet_low_speed_test.py --ping-count 50 --csr-loops 512 --bind
 ### Phase 1: Finish Current Blockers
 
 1. **USB HPI readback**
-   - Capture external HPI read/write pins.
-   - Compare against Terasic demo if needed.
+   - Use on-FPGA HPI pad snapshots instead of external pin monitoring.
+   - Compare against the Terasic demo HPI initialization/reset sequence.
    - Pass when CY control/status or memory readback returns expected nonzero
      values and memory write/read works.
 2. **USB host mode**
