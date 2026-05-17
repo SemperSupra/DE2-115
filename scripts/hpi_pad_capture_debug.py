@@ -5,11 +5,11 @@ import time
 
 from litex import RemoteClient
 
+from cy7c67200_hpi import PORT_MAPS, TIMING_PROFILES, hpi_cfg
+
 
 USB_BASE = 0x82000000
 BRIDGE_CFG0 = USB_BASE + 0x100
-HPI_DATA = USB_BASE + 0x8
-HPI_ADDRESS = USB_BASE + 0xC
 
 CAP_ADDR_WRITE_LO = USB_BASE + 0x110
 CAP_ADDR_WRITE_HI = USB_BASE + 0x114
@@ -17,16 +17,6 @@ CAP_DATA_WRITE_LO = USB_BASE + 0x118
 CAP_DATA_WRITE_HI = USB_BASE + 0x11C
 CAP_DATA_READ_LO = USB_BASE + 0x120
 CAP_DATA_READ_HI = USB_BASE + 0x124
-
-
-def hpi_cfg(force_rst, rst_n, access, sample, turnaround):
-    return (
-        (force_rst & 1)
-        | ((rst_n & 1) << 1)
-        | ((access & 0x3F) << 2)
-        | ((sample & 0x3F) << 8)
-        | ((turnaround & 0x3F) << 14)
-    )
 
 
 def read64(wb, lo_addr, hi_addr):
@@ -80,19 +70,25 @@ def wait_for_server(port, timeout):
     raise RuntimeError(f"litex_server did not become ready: {last_error}")
 
 
-def run_probe(wb, address, value):
-    wb.write(BRIDGE_CFG0, hpi_cfg(1, 0, 6, 2, 2))
+def run_probe(wb, port_map, timing, address, value):
+    wb.write(BRIDGE_CFG0, hpi_cfg(1, 0, timing.access_cycles, timing.sample_offset, timing.turnaround_cycles))
     time.sleep(0.1)
-    wb.write(BRIDGE_CFG0, hpi_cfg(1, 1, 6, 2, 2))
+    wb.write(BRIDGE_CFG0, hpi_cfg(1, 1, timing.access_cycles, timing.sample_offset, timing.turnaround_cycles))
     time.sleep(0.5)
 
-    wb.write(HPI_ADDRESS, address)
-    wb.write(HPI_DATA, value)
-    wb.write(HPI_ADDRESS, 0x0000)
-    _ = wb.read(HPI_DATA)
-    readback = wb.read(HPI_DATA) & 0xFFFF
+    hpi_address = USB_BASE + port_map.address
+    hpi_data = USB_BASE + port_map.data
 
-    print(f"HPI_PAD_CAPTURE target=0x{address:04x} write=0x{value:04x} read0=0x{readback:04x}")
+    wb.write(hpi_address, address)
+    wb.write(hpi_data, value)
+    wb.write(hpi_address, 0x0000)
+    _ = wb.read(hpi_data)
+    readback = wb.read(hpi_data) & 0xFFFF
+
+    print(
+        f"HPI_PAD_CAPTURE map={port_map.name} timing={timing.name} "
+        f"target=0x{address:04x} write=0x{value:04x} read0=0x{readback:04x}"
+    )
     decode_capture("ADDR_WRITE", read64(wb, CAP_ADDR_WRITE_LO, CAP_ADDR_WRITE_HI))
     decode_capture("DATA_WRITE", read64(wb, CAP_DATA_WRITE_LO, CAP_DATA_WRITE_HI))
     decode_capture("DATA_READ", read64(wb, CAP_DATA_READ_LO, CAP_DATA_READ_HI))
@@ -111,6 +107,8 @@ def main():
     parser.add_argument("--start-server", action="store_true")
     parser.add_argument("--address", type=lambda x: int(x, 0), default=0xC000)
     parser.add_argument("--value", type=lambda x: int(x, 0), default=0x5555)
+    parser.add_argument("--map", choices=sorted(PORT_MAPS), default="canonical")
+    parser.add_argument("--timing", choices=sorted(TIMING_PROFILES), default="fast")
     parser.add_argument("--server-start-timeout", type=float, default=10.0)
     parser.add_argument("--experimental-rtl", action="store_true")
     args = parser.parse_args()
@@ -142,7 +140,13 @@ def main():
     wb = RemoteClient(host="127.0.0.1", port=args.bind_port)
     wb.open()
     try:
-        run_probe(wb, args.address & 0xFFFF, args.value & 0xFFFF)
+        run_probe(
+            wb,
+            PORT_MAPS[args.map],
+            TIMING_PROFILES[args.timing],
+            args.address & 0xFFFF,
+            args.value & 0xFFFF,
+        )
     finally:
         wb.close()
         if server is not None:

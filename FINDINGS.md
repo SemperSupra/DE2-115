@@ -18,3 +18,58 @@ Successfully achieved local build parity with the known-good validation image. T
 - **Evidence:** `trigger_hpi.py` and `cy_hpi_ladder_probe.py` consistently return zeros.
 - **Current Logic:** Includes 2-cycle address setup phase.
 - **Jules Insight:** Historical success was achieved with "Index 15" mapping and "Fast Timing" (6 cycles). This is the primary path forward.
+
+## 4. 2026-05-17 Fast/Index-15 Ladder Continuation
+- **Baseline restored:** The current build SOF (`0x033B0F01`) programmed but did
+  not ping. The validated Ethernet image
+  `validation_images/de2_115_vga_platform_eth10_switchfix_validated_20260427.sof`
+  was restored and passed `10/10` ping plus `64` Etherbone CSR loops.
+- **Fast canonical result:** `scripts/cy_hpi_ladder_probe.py --maps canonical --timings fast`
+  still failed Rung 1. Canonical block and separated-address reads were all
+  `0x0000`.
+- **Fast index-15 result:** `legacy-data2-addr3` (`DATA=A2`, `MAILBOX=A1`,
+  `ADDR=A3`, `STATUS=A0`) returned stable `0xf2f2`, not the expected RAM words.
+  Treat this as alias/nonzero evidence, not a ladder pass.
+- **HPI0 read evidence:** Source/probe captured a canonical data read with
+  `addr=0`, `CS_N=0`, `RD_N=0`, `WR_N=1`, `RST_N=1`, `ACCESS_CYCLES=6`,
+  `SAMPLE_OFFSET=2`, `TURNAROUND=2`, and sampled `hpi_data=0x0000`.
+- **HPI0 alias evidence:** Source/probe captured an index-15/status read at
+  `addr=3` with the same active read controls and `hpi_data=0xf2f2`.
+- **Conclusion:** The FPGA bridge is issuing active HPI read cycles. The next
+  unknown is the external CY7C67200 pad-level behavior or a remaining protocol
+  assumption, not whether the Wishbone bridge attempts a read.
+
+## 5. 2026-05-17 No-External-Analyzer Capture Plan
+- **Constraint:** No external logic analyzer is available for the HPI pins.
+- **Approach:** Add on-FPGA 64-bit pad snapshots to `cy7c67200_wb_bridge.v` and
+  expose them through the existing USB debug window at `0x82000110` through
+  `0x82000124`.
+- **Host tool:** `scripts/hpi_pad_capture_debug.py` now supports explicit HPI
+  maps and timing profiles. Canonical fast is the acceptance path.
+- **Delegation:** Jules review session `14997796971249417694` was created for
+  isolated review of the pad-capture RTL/script. GitHub Actions can validate
+  software syntax and Docker SoC generation after commit/push. Quartus compile,
+  programming, Ethernet gate, pad snapshot, and board swaps remain local-only.
+
+## 6. 2026-05-17 HPI Pad Snapshot Result
+- **Candidate image:** `artifacts/de2_115_vga_platform_hpi_pad_capture_033626D0_20260517.sof`.
+- **Build evidence:** SoC generation passed; Quartus full compile passed with
+  checksum `0x033626D0`, 0 errors, and timing met despite existing
+  unconstrained-clock warnings.
+- **Ethernet gate:** Candidate image passed `20/20` ping and `128` Etherbone
+  CSR loops before HPI capture.
+- **Canonical fast pad capture:** `scripts/hpi_pad_capture_debug.py --start-server --bind-port 1235 --experimental-rtl --map canonical --timing fast --address 0x1000 --value 0x55aa`
+  produced:
+  - Address write: `addr=2`, `CS_N=0`, `WR_N=0`, `RD_N=1`.
+  - Data write: `addr=0`, `CS_N=0`, `WR_N=0`, `RD_N=1`, `hpi_data=0x55aa`.
+  - Data read: `addr=0`, `CS_N=0`, `RD_N=0`, `WR_N=1`, `hpi_data=0x0000`.
+- **Interpretation:** The FPGA is driving canonical writes correctly at the
+  pad-facing bus and is issuing a valid canonical read strobe. The CY7C67200 is
+  still not driving nonzero data back to the FPGA input buffers for canonical
+  memory readback.
+- **Follow-up ladder:** The same candidate image still failed canonical Rung 1.
+  The legacy/index-15 map returned a stable nonzero alias (`0xbfbf` in this
+  placement), not the expected RAM words.
+- **Next boundary:** Compare reset/strap/protocol assumptions against a known
+  Terasic USB demo or repeat this same candidate image on a second DE2-115
+  board. If the second board matches, continue as a design/protocol issue.

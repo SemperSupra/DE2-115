@@ -62,7 +62,7 @@ module cy7c67200_wb_bridge (
     // Map debug registers to anything above local word address 0x3F.
     wire       debug_access = wb_access & (local_adr[13:6] != 8'd0);
     wire [1:0] bus_hpi_addr = local_adr[1:0];
-    wire [1:0] debug_index = local_adr[1:0];
+    wire [5:0] debug_index = local_adr[5:0];
     wire       hpi_access = active & ~debug_latched;
     wire       hpi_strobe = hpi_access & (count >= 6'd1) & (count < (effective_access_cycles - 6'd1));
     wire [5:0] effective_access_cycles =
@@ -111,6 +111,9 @@ module cy7c67200_wb_bridge (
 
     reg [191:0] diag_probe_reg = 192'd0;
     reg         diag_captured = 1'b0;
+    reg [63:0]  cap_addr_write = 64'd0;
+    reg [63:0]  cap_data_write = 64'd0;
+    reg [63:0]  cap_data_read = 64'd0;
 
     wire [191:0] diag_probe_live = {
         1'b0, cy_o_int, cfg_turnaround_cycles, cfg_access_cycles, cfg_sample_offset,
@@ -120,6 +123,11 @@ module cy7c67200_wb_bridge (
         hpi_cs_n, hpi_rd_n, hpi_wr_n, hpi_addr, state, count, wb_ack,
         local_adr, write_data, read_data, sample_data, last_sample_data,
         cy_o_data[15:0], hpi_data, wb_dat_w[15:0]
+    };
+
+    wire [63:0] pad_capture_live = {
+        1'b1, latched_we, wb_we, hpi_access, hpi_rst_n, hpi_cs_n, hpi_rd_n, hpi_wr_n,
+        hpi_addr, state[1:0], count, local_adr, wb_dat_w[15:0], hpi_data
     };
 
     always @(posedge clk) begin
@@ -151,10 +159,16 @@ module cy7c67200_wb_bridge (
     always @(*) begin
         if (debug_access) begin
             case (debug_index)
-            2'd0: wb_dat_r = {12'd0, cfg_turnaround_cycles, cfg_sample_offset, cfg_access_cycles, cfg_hpi_rst_n, cfg_force_rst_en};
-            2'd1: wb_dat_r = last_ctrl;
-            2'd2: wb_dat_r = {16'h0000, last_sample_data};
-            2'd3: wb_dat_r = {16'h0000, last_cy_data};
+            6'h00: wb_dat_r = {12'd0, cfg_turnaround_cycles, cfg_sample_offset, cfg_access_cycles, cfg_hpi_rst_n, cfg_force_rst_en};
+            6'h01: wb_dat_r = last_ctrl;
+            6'h02: wb_dat_r = {16'h0000, last_sample_data};
+            6'h03: wb_dat_r = {16'h0000, last_cy_data};
+            6'h04: wb_dat_r = cap_addr_write[31:0];
+            6'h05: wb_dat_r = cap_addr_write[63:32];
+            6'h06: wb_dat_r = cap_data_write[31:0];
+            6'h07: wb_dat_r = cap_data_write[63:32];
+            6'h08: wb_dat_r = cap_data_read[31:0];
+            6'h09: wb_dat_r = cap_data_read[63:32];
             default: wb_dat_r = 32'd0;
             endcase
         end else begin
@@ -172,6 +186,15 @@ module cy7c67200_wb_bridge (
                 1'b0, 1'b0, 1'b0, 2'b0, 4'd0};
             last_sample_data <= hpi_data;
             last_cy_data <= cy_o_data[15:0];
+            if (latched_we && (hpi_addr == 2'd2) && (count == 6'd2)) begin
+                cap_addr_write <= pad_capture_live;
+            end
+            if (latched_we && (hpi_addr == 2'd0) && (count == 6'd2)) begin
+                cap_data_write <= pad_capture_live;
+            end
+            if (!latched_we && (hpi_addr == 2'd0) && (count == sample_threshold)) begin
+                cap_data_read <= pad_capture_live;
+            end
         end
 
         if (rst) begin
@@ -215,6 +238,15 @@ module cy7c67200_wb_bridge (
                     debug_latched <= 1'b0;
                     count         <= 6'd0;
                     state         <= STATE_SETUP;
+                end
+            end
+
+            STATE_SETUP: begin
+                count <= count + 6'd1;
+                if (count == 6'd1) begin // 2 cycles of address setup
+                    state <= STATE_WAIT;
+                    count <= 6'd0;
+                    active <= 1'b1;
                 end
             end
 

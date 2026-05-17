@@ -1,63 +1,139 @@
-# DE2-115 Bring-up: Findings & Orchestration Plan
+# DE2-115 Bring-Up Orchestration Plan
 
-## 1. Findings & Current Status
+Date: 2026-05-17
 
-### **Current Hardware Baseline**
-- **SoC Core:** VexRiscv stable, UART diagnostics working.
-- **Ethernet (P1):** 10/100 Mbps stable.
-- **7-Segment Display:** Polarity fixed (active-low).
-- **USB (CY7C67200):** Logical timing blocker. Readback returns `0x0000`.
+## Current Findings
 
-### **Latest Evidence (Verified via Board Swap)**
-- **Board B Failure:** Swapping to a second DE2-115 produced **identical failure modes** (0x0000 on readback).
-- **Logical Failure Confirmed:** Since two boards fail identically, the "Physical Stuck Pin" hypothesis is **REJECTED**.
-- **RTL Refactor:** Implemented `STATE_SETUP` (address setup time) and explicit data bus tri-stating.
+- Four DE2-115 boards are available for board swaps. Use swaps to separate
+  board-specific damage from design-level behavior, but do not start with a
+  swap when the same image and on-FPGA evidence can answer the question.
+- The live board is now on the candidate pad-capture image checksum
+  `0x033626D0`, saved as
+  `artifacts/de2_115_vga_platform_hpi_pad_capture_033626D0_20260517.sof`.
+- The previous current build SOF checksum `0x033B0F01` programmed but did not
+  ping. The pad-capture candidate fixed that build boundary and passed the
+  Ethernet gate.
+- Fast canonical HPI still fails Rung 1 with all-zero readback.
+- Fast index-15 / `legacy-data2-addr3` produces stable `0xf2f2`, but not the
+  expected RAM words. Treat it as alias evidence, not a pass.
+- HPI0 source/probe proves the FPGA bridge asserts an active canonical read
+  cycle. The pad snapshot now additionally proves canonical writes drive the
+  FPGA pad-facing data bus (`0x55aa`) and canonical reads still sample
+  `0x0000`.
 
----
+## Delegation Model
 
-## 2. Recommendations
+| Work item | Best executor | Why |
+| --- | --- | --- |
+| Review narrow RTL/script pad-capture patch | Google Jules | Isolated code review can run independently and does not need board access. |
+| Python syntax checks and repository static checks | GitHub Actions | Pure software checks are repeatable and do not require DE2-115 hardware. |
+| LiteX SoC generation in Docker | GitHub Actions or local Docker | No board access required; good CI gate before hardware compile. |
+| Quartus full compile | Local Windows host | Requires installed Quartus; GitHub hosted runners do not have this setup. |
+| Programming FPGA | Local Windows host | Requires USB-Blaster and physical board. |
+| Ethernet regression | Local bench | Requires programmed board and network path to `192.168.178.50`. |
+| HPI pad snapshot run | Local bench | Requires programmed pad-capture SOF and Etherbone. |
+| Board swaps across the four DE2-115 boards | Local bench | Physical operation; only after image-level evidence justifies it. |
 
-1.  **Regenerate SoC:** Force a top-level regeneration to ensure the 7-segment fix and HPI timing logic are fully integrated.
-2.  **Timing Validation:** Verify the new timing state machine on Board B.
-3.  **LCP Handshake:** Once readback is restored, proceed to load the USB host firmware.
+## Dependency Graph
 
----
+```mermaid
+graph TD
+    A[Document current status and plan] --> B[Jules reviews pad-capture patch]
+    A --> C[Implement local pad-capture RTL/script]
+    C --> D[Python syntax and HPI bridge simulation]
+    C --> E[SoC generation / CI static checks]
+    D --> F[Quartus compile on Windows]
+    E --> F
+    F --> G[Program one board with candidate SOF]
+    G --> H[Ethernet regression gate]
+    H --> I[Run HPI pad snapshot over Etherbone]
+    I --> J{Canonical HPI read returns expected data?}
+    J -- yes --> K[Proceed to LCP / COMM_ACK ladder]
+    J -- no --> L[Compare against Terasic demo or swap board]
+    L --> M{Same failure on second board?}
+    M -- yes --> N[Protocol / RTL root-cause path]
+    M -- no --> O[Board-specific CY7C67200 / assembly issue]
+```
 
-## 3. Orchestration Plan: Delegation & Execution
-
-### **Task Allocation**
-| Delegate | Responsibility | Tasks | Status |
-| :--- | :--- | :--- | :--- |
-| **Google Jules** | **RTL Refactoring** | Emergency timing refactor complete. | **DONE** |
-| **Local Agent** | **HIL / Build** | Regenerate SoC, Full Build, Program. | **PENDING REBOOT** |
-
-### **Execution Matrix**
-
-| Task ID | Description | Delegate | Type | Dependencies |
-| :--- | :--- | :--- | :--- | :--- |
-| **T4.1** | Regenerate SoC (7seg + HPI fixes) | **Local** | Logic | None |
-| **T4.2** | Full Quartus Compile | **Local** | Build | T4.1 |
-| **T4.3** | Verify HPI Readback (0x0011) | **Local** | HIL | T4.2 |
-| **T5.1** | Initialize USB Host Stack | **Local** | FW | T4.3 |
-
----
-
-## 4. Sequencing Diagram (Mermaid)
+## Sequencing Diagram
 
 ```mermaid
 sequenceDiagram
-    participant J as Google Jules (Logic)
-    participant L as Local (Hardware/HIL)
+    participant Local as Local Codex/Bench
+    participant Jules as Google Jules
+    participant CI as GitHub Actions
+    participant Board as DE2-115 Board
 
-    Note over J, L: Logic Pivot (May 16)
-    L->>J: Emergency Refactor: Timing Fix
-    J->>J: Implement STATE_SETUP & Tri-state
-    J-->>L: Pull RTL Patch
-    L->>L: Re-apply 7-Segment Fix
-
-    Note over L: Next Steps (After Reboot)
-    L->>L: scripts/build_soc.sh 1
-    L->>L: quartus_sh --flow compile
-    L->>L: Program Board B
-    L->>L: scripts/trigger_hpi.py (Verify 0x0011)
+    Local->>Local: Update docs and implement pad-capture RTL/script
+    par Independent review
+        Local->>Jules: Request focused pad-capture review
+        Jules-->>Local: Review notes or narrow patch
+    and Software/CI gates
+        Local->>CI: Push/trigger static and SoC-generation checks
+        CI-->>Local: Python/build status
+    and Local syntax/simulation
+        Local->>Local: py_compile and HPI bridge simulation
+    end
+    Local->>Local: Quartus compile candidate SOF
+    Local->>Board: Program candidate image
+    Board-->>Local: FPGA configured
+    Local->>Board: Ethernet regression
+    alt Ethernet passes
+        Local->>Board: Run HPI pad snapshot
+        Board-->>Local: Address/write/read pad-facing samples
+    else Ethernet fails
+        Local->>Board: Restore validated SOF
+        Local->>Local: Fix build before USB testing
+    end
+    alt Pad snapshot shows design-level failure on current board
+        Local->>Board: Repeat on second board only if needed
+    else Pad snapshot passes Rung 1
+        Local->>Board: Resume LCP/COMM_ACK ladder
+    end
 ```
+
+## Parallel Work
+
+These can run in parallel:
+
+- Jules review of `cy7c67200_wb_bridge.v` and `scripts/hpi_pad_capture_debug.py`.
+- GitHub Actions static checks and Docker SoC generation.
+- Local Python syntax checks and HPI bridge simulation.
+- Documentation updates, because they do not affect generated hardware.
+
+These must be sequential:
+
+- Quartus compile must wait for accepted RTL/source changes.
+- FPGA programming must wait for Quartus compile.
+- Ethernet regression must wait for programming.
+- HPI pad snapshot must wait for Ethernet/Etherbone passing on the candidate
+  image.
+- LCP/SIE/HID work must wait for canonical HPI Rung 1 passing.
+- Board swaps should wait until the same candidate image has a clear pass/fail
+  on one board.
+
+## Execution State
+
+| Task | Owner | Status |
+| --- | --- | --- |
+| Document current orchestration and four-board policy | Local | Done |
+| Implement first-pass on-FPGA HPI pad snapshots | Local | Done |
+| Python syntax check for pad script | Local | Done |
+| HPI bridge simulation in Docker | Local | Done |
+| Jules focused review | Jules | Session `14997796971249417694` created |
+| GitHub Actions delegation | Local/CI | Available after commit/push; workflows do not expose manual dispatch |
+| Quartus compile of candidate pad-capture image | Local | Done, checksum `0x033626D0` |
+| Hardware program/regression/snapshot | Local bench | Done on first board; canonical read still samples zero |
+| Second-board confirmation or Terasic demo comparison | Local bench | Next sequential task |
+
+## Recommendations
+
+1. Keep the validated SOF programmed whenever pausing.
+2. Use the new on-FPGA pad snapshot before swapping boards. It is the cheapest
+   way to confirm what the FPGA pad-facing inputs see.
+3. If the candidate pad-capture image fails Ethernet, stop USB work and fix the
+   current build reproducibility problem first.
+4. If pad snapshots show the same canonical read failure on two boards, treat it
+   as a design/protocol issue. If one board differs, isolate the board-specific
+   CY7C67200 path.
+5. Do not resume LCP until canonical memory write/read returns expected data.

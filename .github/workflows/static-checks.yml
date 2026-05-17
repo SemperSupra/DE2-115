@@ -26,4 +26,4 @@ jobs:
         run: |
           test -f ORCHESTRATION_PLAN.md
           test -f docs/USB_HPI_ALIASING_ORCHESTRATION.md
-          grep -q "0x033E503E" ORCHESTRATION_PLAN.md
+          grep -q "HPI pad snapshot" ORCHESTRATION_PLAN.md

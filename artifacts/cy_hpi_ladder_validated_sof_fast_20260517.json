@@ -1,0 +1,95 @@
+{
+  "maps": [
+    "canonical",
+    "legacy-data2-addr3"
+  ],
+  "timings": [
+    "fast"
+  ],
+  "rung1_pass": false,
+  "results": [
+    {
+      "timing": "fast",
+      "map": "canonical",
+      "cfg": 33307,
+      "block_expected": [
+        4951,
+        9320,
+        13980,
+        21930
+      ],
+      "block_actual": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "block_class": "ALIAS_OR_ECHO",
+      "separated_expected": [
+        42241,
+        23042,
+        49923
+      ],
+      "separated_actual": [
+        0,
+        0,
+        0
+      ],
+      "separated_class": "ALIAS_OR_ECHO",
+      "status": 0,
+      "mailbox": 0,
+      "cpu_flags": 0,
+      "hw_rev": 0,
+      "power": 0,
+      "bridge": {
+        "cfg": 33307,
+        "last_ctrl": 52432384,
+        "last_sample": 0,
+        "last_cy": 0
+      },
+      "rung1_pass": false
+    },
+    {
+      "timing": "fast",
+      "map": "legacy-data2-addr3",
+      "cfg": 33307,
+      "block_expected": [
+        4951,
+        9320,
+        13980,
+        21930
+      ],
+      "block_actual": [
+        62194,
+        62194,
+        62194,
+        62194
+      ],
+      "block_class": "ALIAS_OR_ECHO",
+      "separated_expected": [
+        42241,
+        23042,
+        49923
+      ],
+      "separated_actual": [
+        62194,
+        62194,
+        62194
+      ],
+      "separated_class": "ALIAS_OR_ECHO",
+      "status": 0,
+      "mailbox": 0,
+      "cpu_flags": 62194,
+      "hw_rev": 62194,
+      "power": 62194,
+      "bridge": {
+        "cfg": 33307,
+        "last_ctrl": 52430848,
+        "last_sample": 0,
+        "last_cy": 62194
+      },
+      "rung1_pass": false
+    }
+  ],
+  "mailbox": null
+}

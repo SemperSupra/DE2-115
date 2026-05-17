@@ -50,11 +50,25 @@ HPI0 read_data: rst=0 hpi_rst_n=1 cs_n=0 rd_n=0 wr_n=1 addr=0 data=0000
 
 Action:
 
-- Capture external HPI pins during read/write cycles with SignalTap or a logic analyzer.
-- Confirm whether the CY drives `OTG_DATA[15:0]` during `CS_N/RD_N`.
+- Review and refine the local on-FPGA HPI pad snapshot implementation when
+  delegated. Current Jules review session: `14997796971249417694`.
+- Confirm whether debug register offsets `0x100` through `0x124` map correctly
+  through LiteX/Etherbone to the bridge local debug words.
+- Confirm whether the snapshot count points are correct for address/data writes
+  and canonical reads.
 - Compare against a known-good Terasic USB demo bitstream on the same board if possible.
 
 Goal: restore basic HPI memory/control-register readback.
+
+### Current Delegation Boundaries
+
+- Jules should handle isolated RTL/script review and small patches.
+- Jules should not own hardware programming, Ethernet regression, or board
+  swaps.
+- GitHub Actions can run static Python checks and Docker SoC generation after a
+  commit/push.
+- Local execution owns Quartus compile, FPGA programming, Etherbone hardware
+  tests, and board swaps across the four available DE2-115 boards.
 
 ### B. LCP Firmware Flow
 

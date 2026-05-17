@@ -19,7 +19,7 @@ Finish board bring-up by keeping the now-working Ethernet forced-10/100 path sta
 ```mermaid
 graph TD
     A[Known-good build and UART diagnostics] --> C[Low-speed Ethernet regression]
-    C --> B[USB HPI external pin capture]
+    C --> B[USB HPI on-FPGA pad snapshot]
     B --> D[Fix CY7C67200 readback]
     D --> E[Verify LCP memory check and COMM_ACK]
     E --> F[Run SIE1_INIT and USB_RESET]
@@ -32,9 +32,11 @@ graph TD
 
 ## Phase 1: USB HPI Readback Blocker
 
-### Action 1.1: Capture HPI Read/Write Cycles
+### Action 1.1: Capture HPI Read/Write Cycles Without External Equipment
 
-Use SignalTap or an external logic analyzer to capture one firmware memory write and one firmware memory read.
+Use the on-FPGA pad snapshot registers in `cy7c67200_wb_bridge.v` to capture
+one HPI address write, one data write, and one data read. This is the preferred
+path because no external analyzer is available.
 
 Signals:
 
@@ -58,11 +60,21 @@ Expected read failure currently seen:
 HPI DBG RD ... sample=00000000 cy=00000000
 ```
 
-Goal: determine whether the CY7C67200 is not driving the bus, the FPGA is sampling at the wrong time, or reset/boot/strap state is preventing HPI read response.
+Host command after a pad-capture SOF passes the Ethernet gate:
+
+```powershell
+python scripts\hpi_pad_capture_debug.py --start-server --bind-port 1235 --experimental-rtl --map canonical --timing fast
+```
+
+Goal: determine what the FPGA input buffers see on `OTG_DATA[15:0]` during the
+active HPI cycles. If this remains zero during a valid canonical read cycle,
+move to protocol/reset/strap comparison and board-swap checks.
 
 ### Action 1.2: Compare Against Terasic Demo
 
 Run a known-good Terasic USB demo bitstream on the same board if available.
+Four DE2-115 boards are available; board swaps are useful after the candidate
+image has a clear pass/fail on one board.
 
 Goal: distinguish project RTL/firmware issues from board/CY7C67200 hardware state.
 
