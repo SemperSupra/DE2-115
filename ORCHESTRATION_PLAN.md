@@ -23,6 +23,9 @@ Date: 2026-05-17
 - Board A was swapped in for board B and reproduced the same canonical
   readback failure using the same `0x033626D0` SOF. The legacy/index-15 alias
   changed to `0xcfcf`, reinforcing that the alias is not valid HPI memory data.
+- A board-A reset/timing sweep with longer reset dwell still failed canonical
+  Rung 1 under `spec`, `fast`, and `slow` timing. Spec and slow pad snapshots
+  also sampled `0x0000` on canonical reads.
 
 ## Delegation Model
 
@@ -127,7 +130,8 @@ These must be sequential:
 | Quartus compile of candidate pad-capture image | Local | Done, checksum `0x033626D0` |
 | Hardware program/regression/snapshot | Local bench | Done on board B and board A; canonical read still samples zero |
 | Second-board confirmation | Local bench | Done; board A matches board B |
-| Terasic demo comparison | Local bench | Next sequential task |
+| Reset/timing sweep on board A | Local bench | Done; canonical still all zero |
+| Terasic demo and schematic/VBUS/strap comparison | Local bench | Next sequential task |
 
 ## Recommendations
 
@@ -138,4 +142,6 @@ These must be sequential:
    current build reproducibility problem first.
 4. Pad snapshots now show the same canonical read failure on two boards, so
    treat the next phase as a design/protocol/reset/strap issue.
-5. Do not resume LCP until canonical memory write/read returns expected data.
+5. Reset/timing sweeps did not rescue canonical HPI; prioritize schematic,
+   VBUS, jumper, and boot-strap evidence before any more RTL churn.
+6. Do not resume LCP until canonical memory write/read returns expected data.

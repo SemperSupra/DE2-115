@@ -23,6 +23,10 @@
       write data is visible at the FPGA pad-facing bus, while read data remains
       `0x0000`. The legacy/index-15 alias changed to `0xcfcf`, confirming it is
       not valid memory readback.
+    - Board A reset/timing sweep still failed canonical Rung 1 across `spec`,
+      `fast`, and `slow` timing after a longer reset dwell (`0.5 s` low,
+      `2.0 s` high). Spec and slow pad captures also sampled read data as
+      `0x0000`.
 
 ## Key Changes
 - **ROM Size:** Permanently increased to 64 KiB (`0x10000`) to fit BIOS + firmware.
@@ -41,7 +45,8 @@
 2.  **Terasic demo or protocol review:** Second-board confirmation is complete:
     board A matches board B at the canonical readback failure. The next useful
     boundary is comparing against a known-good Terasic CY7C67200 USB demo
-    bitstream or auditing the HPI reset/strap/protocol assumptions.
+    bitstream with explicit board-power/jumper/VBUS observations, plus auditing
+    the HPI reset/strap/protocol assumptions.
 3.  **Do not run LCP:** Rung 1 canonical memory write/read is not proven.
 4.  **Board swaps:** Four DE2-115 boards are available. Swap only after the
     same candidate SOF has a clear pass/fail on the first board.

@@ -105,3 +105,22 @@ Successfully achieved local build parity with the known-good validation image. T
   damaged CY7C67200 or board assembly issue. Treat the next boundary as a
   design/protocol/reset/strap comparison against the Terasic USB demo, not as
   more LCP work.
+
+## 9. 2026-05-17 Reset/Timing Sweep After Board-A Swap
+- **Reset dwell sweep:** Board A was probed with reset held low for `0.5 s` and
+  high for `2.0 s` before HPI access.
+- **Timing sweep:** Canonical and `legacy-data2-addr3` maps were tested under
+  `spec`, `fast`, and `slow` profiles. Canonical still returned all `0x0000`
+  for memory, status, mailbox, CPU flags, HW revision, and power registers.
+- **Legacy alias behavior:** The legacy map continued to return nonzero aliases,
+  but the values varied by timing (`0xcfcf`, `0x1313`, `0x0101`, and one
+  `0x0144` word under slow timing). This confirms the legacy path is not a
+  valid memory/register readback path.
+- **Pad snapshots under spec/slow:** Canonical writes still drove
+  `hpi_data=0x55aa`. Canonical reads still sampled `hpi_data=0x0000` under
+  both `spec` and `slow` timing.
+- **Audit outcome:** No assigned pin or generated QSF entry drives CY DACK,
+  GPIO30/GPIO31, VBUS-enable, or wake sideband nets. The current design leaves
+  boot-selection sideband pins to board straps.
+- **Next boundary:** Schematic/strap/VBUS audit and a Terasic demo rerun with
+  explicit board-power/jumper observations. Do not run LCP/SIE/HID work.
