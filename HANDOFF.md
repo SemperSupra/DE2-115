@@ -25,10 +25,14 @@
 - **Ethernet Pin Note:** Pin audit shows `ENET1_GTX_CLK` is `PIN_C23` and
   `PIN_C22` is `ENET1_TX_CLK`; do not apply the older C22 note blindly.
 - **HPI Fix:** Re-applied 2-cycle address setup phase in the bridge.
+- **HPI Pad Capture:** Added on-FPGA 64-bit pad snapshots for canonical address
+  write, data write, and data read.
+- **CI Delegation:** Added manual workflow dispatch and fixed stale CI gates.
+  Static Checks `25988084275` and LiteX SoC Build `25988084379` both pass.
 
 ## Next Steps for Codex CLI
 1.  **Review Jules feedback:** Jules session `14997796971249417694` is reviewing
-    the narrow pad-capture implementation.
+    the narrow pad-capture implementation and was still running at handoff.
 2.  **Second-board confirmation or Terasic demo:** The next useful boundary is
     either running this same `0x033626D0` candidate on a second DE2-115 board or
     comparing against a known-good Terasic CY7C67200 USB demo bitstream.
@@ -41,3 +45,5 @@
 - **Live image:** `artifacts\de2_115_vga_platform_hpi_pad_capture_033626D0_20260517.sof`
 - **Port:** `litex_server` target UDP 1234; host bind port 1235 for tests.
 - **UART:** COM3, 115200.
+- **Latest commits:** `f21b996` adds pad snapshots/orchestration; `359c92e`
+  enables manual CI dispatch.

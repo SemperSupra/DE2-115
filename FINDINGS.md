@@ -73,3 +73,14 @@ Successfully achieved local build parity with the known-good validation image. T
 - **Next boundary:** Compare reset/strap/protocol assumptions against a known
   Terasic USB demo or repeat this same candidate image on a second DE2-115
   board. If the second board matches, continue as a design/protocol issue.
+
+## 7. 2026-05-17 Delegation Results
+- **Google Jules:** Review session `14997796971249417694` was opened for the
+  narrow pad-capture RTL/script review. It was still running at handoff time.
+- **GitHub Actions:** Static Checks run `25988084275` passed after fixing the
+  stale orchestration grep and adding manual dispatch. LiteX SoC Build run
+  `25988084379` passed after fixing the HPI simulation command to compile
+  `tb.v` instead of `test_hpi_sim.py`.
+- **Local-only hardware:** Quartus compile, programming, Ethernet gate, HPI pad
+  snapshot, and ladder probe completed locally because they require Quartus
+  and/or physical DE2-115 hardware.
