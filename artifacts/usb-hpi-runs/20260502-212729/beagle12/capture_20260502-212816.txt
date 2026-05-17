@@ -1,0 +1,10 @@
+Opened Beagle device on port 0
+Sampling rate set to 48000 KHz.
+Idle timeout set to 500 ms.
+Latency set to 200 ms.
+Host interface is high speed.
+
+index,time(ns),USB,status,pid,data0 ... dataN(*)
+0,23437,USB,( OK TGT_CONNECT/UNRST; ),
+1,135676865270,USB,( OK TGT_DISCON; RESET; ),
+2,137801556562,USB,( OK TGT_CONNECT/UNRST; ),

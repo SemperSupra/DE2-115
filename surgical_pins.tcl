@@ -1,13 +1,17 @@
 package require ::quartus::project
 
-project_open build/terasic_de2_115/gateware/de2_115_vga_platform
+project_open de2_115_vga_platform
 
 set_location_assignment PIN_Y2 -to clk50
 set_location_assignment PIN_M23 -to buttons0
 
+# UART (Corrected: Manual says TXD is G12, RXD is G9)
+set_location_assignment PIN_G12 -to serial_tx
+set_location_assignment PIN_G9 -to serial_rx
+
 # Ethernet 1 (RGMII)
 set_location_assignment PIN_B15 -to eth_gtx_clocks1_rx
-set_location_assignment PIN_C23 -to eth_gtx_clocks1_tx
+set_location_assignment PIN_C22 -to eth_gtx_clocks1_tx
 set_location_assignment PIN_D25 -to rgmii_eth1_mdio
 set_location_assignment PIN_D23 -to rgmii_eth1_mdc
 set_location_assignment PIN_D22 -to rgmii_eth1_rst_n

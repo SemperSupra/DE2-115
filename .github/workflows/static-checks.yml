@@ -1,0 +1,29 @@
+name: Static Checks
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - ethernet-baseline-shim
+
+jobs:
+  python-syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile Python scripts
+        run: python -m compileall -q scripts
+
+  docs-links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check orchestration docs exist
+        run: |
+          test -f ORCHESTRATION_PLAN.md
+          test -f docs/USB_HPI_ALIASING_ORCHESTRATION.md
+          grep -q "0x033E503E" ORCHESTRATION_PLAN.md

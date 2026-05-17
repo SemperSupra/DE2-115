@@ -1,0 +1,8 @@
+Opened Beagle device on port 0
+Sampling rate set to 48000 KHz.
+Idle timeout set to 500 ms.
+Latency set to 200 ms.
+Host interface is high speed.
+
+index,time(ns),USB,status,pid,data0 ... dataN(*)
+0,0,USB,( OK HOST_DISCON; ),

@@ -1,0 +1,20 @@
+{
+  "run_id": "20260502-212729",
+  "git_commit": "78488d2e50e979212104bf8ea74fdc97ec45b34b",
+  "branch": "usb-beagle12-host-isolation",
+  "sof_file": "",
+  "sof_sha256": "",
+  "firmware_mode": "",
+  "com_port": "COM3",
+  "ethernet_port": "DE2-115 Port 1",
+  "agentwebcam_camera": 1,
+  "beagle12_used": true,
+  "beagle12_capture_files": [],
+  "usb_test_topology": "DE2-115 host port (LiteX Patched) -> Beagle 12 -> simple USB keyboard",
+  "switch_positions": "",
+  "baseline_ethernet_pass": false,
+  "baseline_gpio_pass": false,
+  "hpi_readback_result": "",
+  "usb_packet_result": "",
+  "conclusion": ""
+}

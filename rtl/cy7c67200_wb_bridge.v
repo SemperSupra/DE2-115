@@ -23,17 +23,18 @@ module cy7c67200_wb_bridge (
     output wire [191:0] dbg_probe
 );
 
-    localparam STATE_IDLE       = 2'd0;
-    localparam STATE_WAIT       = 2'd1;
-    localparam STATE_ACK        = 2'd2;
-    localparam STATE_TURNAROUND = 2'd3;
+    localparam STATE_IDLE       = 3'd0;
+    localparam STATE_SETUP      = 3'd1;
+    localparam STATE_WAIT       = 3'd2;
+    localparam STATE_ACK        = 3'd3;
+    localparam STATE_TURNAROUND = 3'd4;
 
 
     localparam ACCESS_CYCLES_DEFAULT     = 6'd63;
     localparam TURNAROUND_CYCLES_DEFAULT = 6'd8;
     localparam SAMPLE_OFFSET_DEFAULT     = 6'd4;
 
-    reg [1:0]  state = STATE_IDLE;
+    reg [2:0]  state = STATE_IDLE;
     reg [5:0]  count = 6'd0;
     reg [15:0] read_data = 16'd0;
     reg [15:0] sample_data = 16'd0;
@@ -212,8 +213,26 @@ module cy7c67200_wb_bridge (
                     write_data    <= wb_dat_w[15:0];
                     latched_we    <= wb_we;
                     debug_latched <= 1'b0;
-                    active        <= 1'b1;
-                    state         <= STATE_WAIT;
+                    count         <= 6'd0;
+                    state         <= STATE_SETUP;
+                end
+            end
+
+            STATE_SETUP: begin
+                count <= count + 6'd1;
+                if (count == 6'd1) begin // 2 cycles of address setup
+                    state <= STATE_WAIT;
+                    count <= 6'd0;
+                    active <= 1'b1;
+                end
+            end
+
+            STATE_SETUP: begin
+                count <= count + 6'd1;
+                if (count == 6'd1) begin // 2 cycles of address setup
+                    state <= STATE_WAIT;
+                    count <= 6'd0;
+                    active <= 1'b1;
                 end
             end
 

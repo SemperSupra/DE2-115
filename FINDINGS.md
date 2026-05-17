@@ -1,24 +1,20 @@
-# Findings
+# Findings - May 17, 2026
 
-Date: 2026-05-16
+## Milestone: Local Build Baseline Verified
+Successfully achieved local build parity with the known-good validation image. The environment is now capable of producing booting bitstreams with working networking and UART.
 
-## Current Status
+## 1. The "Empty ROM" Diagnosis
+- **Symptom:** Board dead, no ping, no UART.
+- **Cause:** Increasing ROM size to 64KiB shifted the CSR map, making old firmware hang. Reverting to 32KiB caused a silent BIOS overflow during build, resulting in an empty ROM.
+- **Fix:** Locked ROM at 64KiB, rebuilt firmware against new headers, and ensured `.init` files are correctly located by Quartus.
 
-- **CPU/UART:** VexRiscv firmware is executing and UART diagnostics are reliable on COM3 at 115200 baud.
-- **VGA:** Working.
-- **Ethernet:** Port 1 is stable at 10/100 Mbps.
-- **7-Segment Display:** Logic inverted to active-low in `de2_115_vga_target.py` to match DE2-115 hardware.
-- **USB HPI (CY7C67200):** **LOGICAL TIMING BLOCKER.**
-    - **Hardware Validated:** Swapped to a second DE2-115 board (Board B); failure mode was identical (0x0000 readback). This definitively disproves the "Stuck Pin H7" hypothesis.
-    - **Internal Logic:** LiteScope confirms that internal FPGA signals are toggling correctly.
-    - **Refactor:** Implemented `STATE_SETUP` in the HPI bridge (2-cycle address stability) and 4-cycle explicit tri-stating on the data bus to resolve potential contention/setup violations.
+## 2. Ethernet Pin Contention
+- **Symptom:** Networking died after UART pin correction.
+- **Cause:** Typo in `surgical_pins.tcl` assigned `eth_gtx_clocks1_tx` to `C23` instead of `C22`.
+- **Fix:** Corrected pin assignment in both TCL and QSF.
 
-## Root Cause Analysis (Revised)
-
-The 0x0000 readback is caused by a timing mismatch between the FPGA's asynchronous HPI bridge and the CY7C67200 chip. Specifically, the chip requires the address to be stable before Chip Select falls, and the FPGA must not drive the data bus during the chip's turn-around time.
-
-## Recommended Next Steps
-
-1.  **Regenerate SoC:** Run `./scripts/build_soc.sh 1` to integrate the latest RTL and 7-segment fixes into the top-level.
-2.  **Full Compile:** Perform a clean Quartus build.
-3.  **HPI Validation:** Run `scripts/trigger_hpi.py` to verify `HPI_CHIP_ID` (0x0011).
+## 3. HPI Status (Blocker)
+- **Status:** **0x0000 Readback**.
+- **Evidence:** `trigger_hpi.py` and `cy_hpi_ladder_probe.py` consistently return zeros.
+- **Current Logic:** Includes 2-cycle address setup phase.
+- **Jules Insight:** Historical success was achieved with "Index 15" mapping and "Fast Timing" (6 cycles). This is the primary path forward.

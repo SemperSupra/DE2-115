@@ -1,26 +1,26 @@
-# Handoff Report: 2026-05-16 (Pre-Reboot)
+# Handoff Report: 2026-05-17 (Post-Baseline Restoration)
 
 ## Current Status
-- **USB HPI Debug:** **DIAGNOSED AS LOGICAL**. 
-    - Board swap confirmed the issue is NOT a physical failure on Board A's Pin H7.
-    - Failure is a timing/race condition on the asynchronous HPI bus.
-- **RTL Refactor:** **IMPLEMENTED**. 
-    - `cy7c67200_wb_bridge.v`: Added `STATE_SETUP` for 2-cycle address setup.
-    - `CY7C67200_IF.v`: Added explicit 4-cycle tri-state at the start of read cycles.
-- **7-Segment Display:** **FIXED**. Inverted segment logic in `de2_115_vga_target.py` for active-low hardware.
-- **Blocked On:** SoC regeneration (Docker error) and full build.
+- **Board Life:** **RESTORED**. The board pings at `192.168.178.50` and boots to the BIOS.
+- **Etherbone:** **FUNCTIONAL**. Identifier "LiteX VGA Test S" can be read over the network.
+- **UART:** **FUNCTIONAL**. BIOS heartbeat logs are visible on COM3 at 115200 baud.
+- **USB HPI Debug:** **REPRODUCED BLOCKER**. 
+    - Readback still returns `0x0000` (`hpi=0000` in logs).
+    - Ladder probe across all mappings/timings returned zeros.
+    - **Hypothesis:** The physical pins are working (bridge is active), but the timing or logic is still not satisfying the CY7C67200 requirements.
 
-## Summary of Changes
-- **Logical Fixes:** HPI timing refactor and 7-segment polarity inversion applied to local source.
-- **Pins:** Reverted to standard `H7` mapping (no jumpers needed).
-- **Documentation:** Updated `FINDINGS.md` and `ORCHESTRATION_PLAN.md` with the logical pivot.
+## Key Changes
+- **ROM Size:** Permanently increased to 64 KiB (`0x10000`) to fit BIOS + firmware.
+- **CSR Map:** Aligned firmware with the shifted CSR map.
+- **Ethernet Fix:** Corrected `eth_gtx_clocks1_tx` to `PIN_C22`.
+- **HPI Fix:** Re-applied 2-cycle address setup phase in the bridge.
 
-## Next Steps (Post-Reboot)
-1.  **Regenerate SoC:** Run `./scripts/build_soc.sh 1` (requires Docker).
-2.  **Apply Pins:** Run `quartus_sh -t surgical_pins.tcl`.
-3.  **Full Build:** Run clean Quartus compile in `build/terasic_de2_115/gateware`.
-4.  **Verification:** Load SOF and run `scripts/trigger_hpi.py`. Target is `0x0011`.
+## Next Steps for Codex CLI
+1.  **Fast Timing:** Apply Jules' recommendation of `ACCESS_CYCLES=6`.
+2.  **Index 15 Mapping:** Test the Jules-discovered mapping: `DATA=A2, MAILBOX=A1, ADDR=A3, STATUS=A0`.
+3.  **SignalTap Capture:** Use the restored environment to capture the setup phase on physical pins.
 
-## Repositories
+## Environment
 - **Branch:** `ethernet-baseline-shim`
-- **Status:** Committing and pushing logical fixes now.
+- **Port:** `litex_server` on 1234.
+- **UART:** COM3, 115200.

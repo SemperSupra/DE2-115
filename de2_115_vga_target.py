@@ -242,6 +242,9 @@ class DE2_115VGAMaster(SoCCore):
         self.add_timer()
         self.add_uart(baudrate=115200)
 
+        # Debug CSRs
+        self.submodules.crg_status = GPIOIn(Cat(self.crg.pll.locked, self.crg.rst))
+
         # SD Card
         self.add_sdcard()
 
@@ -349,17 +352,17 @@ class DE2_115VGAMaster(SoCCore):
             csr_csv      = "analyzer.csv",
         )
 
-        if hasattr(self, "ethmac"):
-            self.submodules.eth_analyzer = LiteScopeAnalyzer(
-                [
-                    self.ethmac.core.source,
-                    self.ethmac.core.sink,
-                ],
-                depth        = 1024,
-                clock_domain = "sys",
-                register     = True,
-                csr_csv      = "eth_analyzer.csv"
-            )
+#        if hasattr(self, "ethmac"):
+#            self.submodules.eth_analyzer = LiteScopeAnalyzer(
+#                [
+#                    self.ethmac.core.source,
+#                    self.ethmac.core.sink,
+#                ],
+#                depth        = 1024,
+#                clock_domain = "sys",
+#                register     = True,
+#                csr_csv      = "eth_analyzer.csv"
+#            )
 
         # Leave CY7C67200 boot-selection pins to the board straps. Driving HPI
         # data pins during reset caused readback to float high on this board.

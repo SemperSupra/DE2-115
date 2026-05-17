@@ -1,0 +1,403 @@
+
+State Machine - |de2_115_vga_platform|wishbone2csr_state
+Name wishbone2csr_state.00 wishbone2csr_state.10 wishbone2csr_state.01 
+wishbone2csr_state.00 0 0 0 
+wishbone2csr_state.01 1 0 1 
+wishbone2csr_state.10 1 1 0 
+
+State Machine - |de2_115_vga_platform|sdmem2blockdma_state
+Name sdmem2blockdma_state.00 sdmem2blockdma_state.10 sdmem2blockdma_state.01 
+sdmem2blockdma_state.00 0 0 0 
+sdmem2blockdma_state.01 1 0 1 
+sdmem2blockdma_state.10 1 1 0 
+
+State Machine - |de2_115_vga_platform|sdblock2memdma_state
+Name sdblock2memdma_state.00 sdblock2memdma_state.10 sdblock2memdma_state.01 
+sdblock2memdma_state.00 0 0 0 
+sdblock2memdma_state.01 1 0 1 
+sdblock2memdma_state.10 1 1 0 
+
+State Machine - |de2_115_vga_platform|sdcore_state
+Name sdcore_state.011 sdcore_state.010 sdcore_state.001 sdcore_state.000 sdcore_state.100 
+sdcore_state.000 0 0 0 0 0 
+sdcore_state.001 0 0 1 1 0 
+sdcore_state.010 0 1 0 1 0 
+sdcore_state.011 1 0 0 1 0 
+sdcore_state.100 0 0 0 1 1 
+
+State Machine - |de2_115_vga_platform|sdphydatar_state
+Name sdphydatar_state.011 sdphydatar_state.010 sdphydatar_state.001 sdphydatar_state.000 sdphydatar_state.100 
+sdphydatar_state.000 0 0 0 0 0 
+sdphydatar_state.001 0 0 1 1 0 
+sdphydatar_state.010 0 1 0 1 0 
+sdphydatar_state.011 1 0 0 1 0 
+sdphydatar_state.100 0 0 0 1 1 
+
+State Machine - |de2_115_vga_platform|sdphydataw_state
+Name sdphydataw_state.0111 sdphydataw_state.0110 sdphydataw_state.0101 sdphydataw_state.0100 sdphydataw_state.0011 sdphydataw_state.0010 sdphydataw_state.0001 sdphydataw_state.0000 sdphydataw_state.1000 
+sdphydataw_state.0000 0 0 0 0 0 0 0 0 0 
+sdphydataw_state.0001 0 0 0 0 0 0 1 1 0 
+sdphydataw_state.0010 0 0 0 0 0 1 0 1 0 
+sdphydataw_state.0011 0 0 0 0 1 0 0 1 0 
+sdphydataw_state.0100 0 0 0 1 0 0 0 1 0 
+sdphydataw_state.0101 0 0 1 0 0 0 0 1 0 
+sdphydataw_state.0110 0 1 0 0 0 0 0 1 0 
+sdphydataw_state.0111 1 0 0 0 0 0 0 1 0 
+sdphydataw_state.1000 0 0 0 0 0 0 0 1 1 
+
+State Machine - |de2_115_vga_platform|sdphycmdr_state
+Name sdphycmdr_state.101 sdphycmdr_state.100 sdphycmdr_state.011 sdphycmdr_state.010 sdphycmdr_state.001 sdphycmdr_state.000 
+sdphycmdr_state.000 0 0 0 0 0 0 
+sdphycmdr_state.001 0 0 0 0 1 1 
+sdphycmdr_state.010 0 0 0 1 0 1 
+sdphycmdr_state.011 0 0 1 0 0 1 
+sdphycmdr_state.100 0 1 0 0 0 1 
+sdphycmdr_state.101 1 0 0 0 0 1 
+
+State Machine - |de2_115_vga_platform|sdphycmdw_state
+Name sdphycmdw_state.00 sdphycmdw_state.10 sdphycmdw_state.01 
+sdphycmdw_state.00 0 0 0 
+sdphycmdw_state.01 1 0 1 
+sdphycmdw_state.10 1 1 0 
+
+State Machine - |de2_115_vga_platform|liteethetherbonewishbonemaster_state
+Name liteethetherbonewishbonemaster_state.11 liteethetherbonewishbonemaster_state.10 liteethetherbonewishbonemaster_state.01 liteethetherbonewishbonemaster_state.00 
+liteethetherbonewishbonemaster_state.00 0 0 0 0 
+liteethetherbonewishbonemaster_state.01 0 0 1 1 
+liteethetherbonewishbonemaster_state.10 0 1 0 1 
+liteethetherbonewishbonemaster_state.11 1 0 0 1 
+
+State Machine - |de2_115_vga_platform|fsm0_state1
+Name fsm0_state1.11 fsm0_state1.10 fsm0_state1.01 fsm0_state1.00 
+fsm0_state1.00 0 0 0 0 
+fsm0_state1.01 0 0 1 1 
+fsm0_state1.10 0 1 0 1 
+fsm0_state1.11 1 0 0 1 
+
+State Machine - |de2_115_vga_platform|liteethetherbonerecordsender_state
+Name liteethetherbonerecordsender_state.00 liteethetherbonerecordsender_state.10 liteethetherbonerecordsender_state.01 
+liteethetherbonerecordsender_state.00 0 0 0 
+liteethetherbonerecordsender_state.01 1 0 1 
+liteethetherbonerecordsender_state.10 1 1 0 
+
+State Machine - |de2_115_vga_platform|liteethetherbonerecordreceiver_state
+Name liteethetherbonerecordreceiver_state.11 liteethetherbonerecordreceiver_state.10 liteethetherbonerecordreceiver_state.01 liteethetherbonerecordreceiver_state.00 
+liteethetherbonerecordreceiver_state.00 0 0 0 0 
+liteethetherbonerecordreceiver_state.01 0 0 1 1 
+liteethetherbonerecordreceiver_state.10 0 1 0 1 
+liteethetherbonerecordreceiver_state.11 1 0 0 1 
+
+State Machine - |de2_115_vga_platform|fsm0_state0
+Name fsm0_state0.11 fsm0_state0.10 fsm0_state0.01 fsm0_state0.00 
+fsm0_state0.00 0 0 0 0 
+fsm0_state0.01 0 0 1 1 
+fsm0_state0.10 0 1 0 1 
+fsm0_state0.11 1 0 0 1 
+
+State Machine - |de2_115_vga_platform|liteethetherbonepacketrx_state
+Name liteethetherbonepacketrx_state.00 liteethetherbonepacketrx_state.10 liteethetherbonepacketrx_state.01 
+liteethetherbonepacketrx_state.00 0 0 0 
+liteethetherbonepacketrx_state.01 1 0 1 
+liteethetherbonepacketrx_state.10 1 1 0 
+
+State Machine - |de2_115_vga_platform|liteethetherbonepacketrx_fsm0_state
+Name liteethetherbonepacketrx_fsm0_state.11 liteethetherbonepacketrx_fsm0_state.10 liteethetherbonepacketrx_fsm0_state.01 liteethetherbonepacketrx_fsm0_state.00 
+liteethetherbonepacketrx_fsm0_state.00 0 0 0 0 
+liteethetherbonepacketrx_fsm0_state.01 0 0 1 1 
+liteethetherbonepacketrx_fsm0_state.10 0 1 0 1 
+liteethetherbonepacketrx_fsm0_state.11 1 0 0 1 
+
+State Machine - |de2_115_vga_platform|liteethetherbonepackettx_fsm0_state
+Name liteethetherbonepackettx_fsm0_state.11 liteethetherbonepackettx_fsm0_state.10 liteethetherbonepackettx_fsm0_state.01 liteethetherbonepackettx_fsm0_state.00 
+liteethetherbonepackettx_fsm0_state.00 0 0 0 0 
+liteethetherbonepackettx_fsm0_state.01 0 0 1 1 
+liteethetherbonepackettx_fsm0_state.10 0 1 0 1 
+liteethetherbonepackettx_fsm0_state.11 1 0 0 1 
+
+State Machine - |de2_115_vga_platform|clockdomainsrenamer_liteethudp_liteethudprx_state
+Name clockdomainsrenamer_liteethudp_liteethudprx_state.00 clockdomainsrenamer_liteethudp_liteethudprx_state.10 clockdomainsrenamer_liteethudp_liteethudprx_state.01 
+clockdomainsrenamer_liteethudp_liteethudprx_state.00 0 0 0 
+clockdomainsrenamer_liteethudp_liteethudprx_state.01 1 0 1 
+clockdomainsrenamer_liteethudp_liteethudprx_state.10 1 1 0 
+
+State Machine - |de2_115_vga_platform|clockdomainsrenamer_liteethudp_liteethudprx_fsm0_state
+Name clockdomainsrenamer_liteethudp_liteethudprx_fsm0_state.11 clockdomainsrenamer_liteethudp_liteethudprx_fsm0_state.10 clockdomainsrenamer_liteethudp_liteethudprx_fsm0_state.01 clockdomainsrenamer_liteethudp_liteethudprx_fsm0_state.00 
+clockdomainsrenamer_liteethudp_liteethudprx_fsm0_state.00 0 0 0 0 
+clockdomainsrenamer_liteethudp_liteethudprx_fsm0_state.01 0 0 1 1 
+clockdomainsrenamer_liteethudp_liteethudprx_fsm0_state.10 0 1 0 1 
+clockdomainsrenamer_liteethudp_liteethudprx_fsm0_state.11 1 0 0 1 
+
+State Machine - |de2_115_vga_platform|clockdomainsrenamer_liteethudp_liteethudptx_fsm0_state
+Name clockdomainsrenamer_liteethudp_liteethudptx_fsm0_state.11 clockdomainsrenamer_liteethudp_liteethudptx_fsm0_state.10 clockdomainsrenamer_liteethudp_liteethudptx_fsm0_state.01 clockdomainsrenamer_liteethudp_liteethudptx_fsm0_state.00 
+clockdomainsrenamer_liteethudp_liteethudptx_fsm0_state.00 0 0 0 0 
+clockdomainsrenamer_liteethudp_liteethudptx_fsm0_state.01 0 0 1 1 
+clockdomainsrenamer_liteethudp_liteethudptx_fsm0_state.10 0 1 0 1 
+clockdomainsrenamer_liteethudp_liteethudptx_fsm0_state.11 1 0 0 1 
+
+State Machine - |de2_115_vga_platform|clockdomainsrenamer_liteethicmprx_state
+Name clockdomainsrenamer_liteethicmprx_state.00 clockdomainsrenamer_liteethicmprx_state.10 clockdomainsrenamer_liteethicmprx_state.01 
+clockdomainsrenamer_liteethicmprx_state.00 0 0 0 
+clockdomainsrenamer_liteethicmprx_state.01 1 0 1 
+clockdomainsrenamer_liteethicmprx_state.10 1 1 0 
+
+State Machine - |de2_115_vga_platform|clockdomainsrenamer_liteethicmprx_fsm0_state
+Name clockdomainsrenamer_liteethicmprx_fsm0_state.11 clockdomainsrenamer_liteethicmprx_fsm0_state.10 clockdomainsrenamer_liteethicmprx_fsm0_state.01 clockdomainsrenamer_liteethicmprx_fsm0_state.00 
+clockdomainsrenamer_liteethicmprx_fsm0_state.00 0 0 0 0 
+clockdomainsrenamer_liteethicmprx_fsm0_state.01 0 0 1 1 
+clockdomainsrenamer_liteethicmprx_fsm0_state.10 0 1 0 1 
+clockdomainsrenamer_liteethicmprx_fsm0_state.11 1 0 0 1 
+
+State Machine - |de2_115_vga_platform|clockdomainsrenamer_liteethicmptx_fsm0_state
+Name clockdomainsrenamer_liteethicmptx_fsm0_state.11 clockdomainsrenamer_liteethicmptx_fsm0_state.10 clockdomainsrenamer_liteethicmptx_fsm0_state.01 clockdomainsrenamer_liteethicmptx_fsm0_state.00 
+clockdomainsrenamer_liteethicmptx_fsm0_state.00 0 0 0 0 
+clockdomainsrenamer_liteethicmptx_fsm0_state.01 0 0 1 1 
+clockdomainsrenamer_liteethicmptx_fsm0_state.10 0 1 0 1 
+clockdomainsrenamer_liteethicmptx_fsm0_state.11 1 0 0 1 
+
+State Machine - |de2_115_vga_platform|clockdomainsrenamer_liteethip_sel_ongoing
+Name clockdomainsrenamer_liteethip_sel_ongoing.00 clockdomainsrenamer_liteethip_sel_ongoing.10 clockdomainsrenamer_liteethip_sel_ongoing.01 
+clockdomainsrenamer_liteethip_sel_ongoing.00 0 0 0 
+clockdomainsrenamer_liteethip_sel_ongoing.01 1 0 1 
+clockdomainsrenamer_liteethip_sel_ongoing.10 1 1 0 
+
+State Machine - |de2_115_vga_platform|clockdomainsrenamer_liteethip_liteethiprx_state
+Name clockdomainsrenamer_liteethip_liteethiprx_state.00 clockdomainsrenamer_liteethip_liteethiprx_state.10 clockdomainsrenamer_liteethip_liteethiprx_state.01 
+clockdomainsrenamer_liteethip_liteethiprx_state.00 0 0 0 
+clockdomainsrenamer_liteethip_liteethiprx_state.01 1 0 1 
+clockdomainsrenamer_liteethip_liteethiprx_state.10 1 1 0 
+
+State Machine - |de2_115_vga_platform|clockdomainsrenamer_liteethip_liteethiprx_fsm0_state
+Name clockdomainsrenamer_liteethip_liteethiprx_fsm0_state.11 clockdomainsrenamer_liteethip_liteethiprx_fsm0_state.10 clockdomainsrenamer_liteethip_liteethiprx_fsm0_state.01 clockdomainsrenamer_liteethip_liteethiprx_fsm0_state.00 
+clockdomainsrenamer_liteethip_liteethiprx_fsm0_state.00 0 0 0 0 
+clockdomainsrenamer_liteethip_liteethiprx_fsm0_state.01 0 0 1 1 
+clockdomainsrenamer_liteethip_liteethiprx_fsm0_state.10 0 1 0 1 
+clockdomainsrenamer_liteethip_liteethiprx_fsm0_state.11 1 0 0 1 
+
+State Machine - |de2_115_vga_platform|clockdomainsrenamer_liteethip_liteethiptx_state
+Name clockdomainsrenamer_liteethip_liteethiptx_state.011 clockdomainsrenamer_liteethip_liteethiptx_state.010 clockdomainsrenamer_liteethip_liteethiptx_state.001 clockdomainsrenamer_liteethip_liteethiptx_state.000 clockdomainsrenamer_liteethip_liteethiptx_state.100 
+clockdomainsrenamer_liteethip_liteethiptx_state.000 0 0 0 0 0 
+clockdomainsrenamer_liteethip_liteethiptx_state.001 0 0 1 1 0 
+clockdomainsrenamer_liteethip_liteethiptx_state.010 0 1 0 1 0 
+clockdomainsrenamer_liteethip_liteethiptx_state.011 1 0 0 1 0 
+clockdomainsrenamer_liteethip_liteethiptx_state.100 0 0 0 1 1 
+
+State Machine - |de2_115_vga_platform|clockdomainsrenamer_liteethip_liteethiptx_fsm0_state
+Name clockdomainsrenamer_liteethip_liteethiptx_fsm0_state.11 clockdomainsrenamer_liteethip_liteethiptx_fsm0_state.10 clockdomainsrenamer_liteethip_liteethiptx_fsm0_state.01 clockdomainsrenamer_liteethip_liteethiptx_fsm0_state.00 
+clockdomainsrenamer_liteethip_liteethiptx_fsm0_state.00 0 0 0 0 
+clockdomainsrenamer_liteethip_liteethiptx_fsm0_state.01 0 0 1 1 
+clockdomainsrenamer_liteethip_liteethiptx_fsm0_state.10 0 1 0 1 
+clockdomainsrenamer_liteethip_liteethiptx_fsm0_state.11 1 0 0 1 
+
+State Machine - |de2_115_vga_platform|clockdomainsrenamer_fsm_state
+Name clockdomainsrenamer_fsm_state.110 clockdomainsrenamer_fsm_state.101 clockdomainsrenamer_fsm_state.100 clockdomainsrenamer_fsm_state.011 clockdomainsrenamer_fsm_state.010 clockdomainsrenamer_fsm_state.001 clockdomainsrenamer_fsm_state.000 
+clockdomainsrenamer_fsm_state.000 0 0 0 0 0 0 0 
+clockdomainsrenamer_fsm_state.001 0 0 0 0 0 1 1 
+clockdomainsrenamer_fsm_state.010 0 0 0 0 1 0 1 
+clockdomainsrenamer_fsm_state.011 0 0 0 1 0 0 1 
+clockdomainsrenamer_fsm_state.100 0 0 1 0 0 0 1 
+clockdomainsrenamer_fsm_state.101 0 1 0 0 0 0 1 
+clockdomainsrenamer_fsm_state.110 1 0 0 0 0 0 1 
+
+State Machine - |de2_115_vga_platform|clockdomainsrenamer_liteetharpcache_state
+Name clockdomainsrenamer_liteetharpcache_state.011 clockdomainsrenamer_liteetharpcache_state.010 clockdomainsrenamer_liteetharpcache_state.001 clockdomainsrenamer_liteetharpcache_state.000 clockdomainsrenamer_liteetharpcache_state.100 
+clockdomainsrenamer_liteetharpcache_state.000 0 0 0 0 0 
+clockdomainsrenamer_liteetharpcache_state.001 0 0 1 1 0 
+clockdomainsrenamer_liteetharpcache_state.010 0 1 0 1 0 
+clockdomainsrenamer_liteetharpcache_state.011 1 0 0 1 0 
+clockdomainsrenamer_liteetharpcache_state.100 0 0 0 1 1 
+
+State Machine - |de2_115_vga_platform|clockdomainsrenamer_liteetharprx_state
+Name clockdomainsrenamer_liteetharprx_state.00 clockdomainsrenamer_liteetharprx_state.10 clockdomainsrenamer_liteetharprx_state.01 
+clockdomainsrenamer_liteetharprx_state.00 0 0 0 
+clockdomainsrenamer_liteetharprx_state.01 1 0 1 
+clockdomainsrenamer_liteetharprx_state.10 1 1 0 
+
+State Machine - |de2_115_vga_platform|clockdomainsrenamer_liteetharprx_fsm0_state
+Name clockdomainsrenamer_liteetharprx_fsm0_state.11 clockdomainsrenamer_liteetharprx_fsm0_state.10 clockdomainsrenamer_liteetharprx_fsm0_state.01 clockdomainsrenamer_liteetharprx_fsm0_state.00 
+clockdomainsrenamer_liteetharprx_fsm0_state.00 0 0 0 0 
+clockdomainsrenamer_liteetharprx_fsm0_state.01 0 0 1 1 
+clockdomainsrenamer_liteetharprx_fsm0_state.10 0 1 0 1 
+clockdomainsrenamer_liteetharprx_fsm0_state.11 1 0 0 1 
+
+State Machine - |de2_115_vga_platform|clockdomainsrenamer_liteetharptx_fsm0_state
+Name clockdomainsrenamer_liteetharptx_fsm0_state.11 clockdomainsrenamer_liteetharptx_fsm0_state.10 clockdomainsrenamer_liteetharptx_fsm0_state.01 clockdomainsrenamer_liteetharptx_fsm0_state.00 
+clockdomainsrenamer_liteetharptx_fsm0_state.00 0 0 0 0 
+clockdomainsrenamer_liteetharptx_fsm0_state.01 0 0 1 1 
+clockdomainsrenamer_liteetharptx_fsm0_state.10 0 1 0 1 
+clockdomainsrenamer_liteetharptx_fsm0_state.11 1 0 0 1 
+
+State Machine - |de2_115_vga_platform|clockdomainsrenamer_liteethmac_state
+Name clockdomainsrenamer_liteethmac_state.00 clockdomainsrenamer_liteethmac_state.10 clockdomainsrenamer_liteethmac_state.01 
+clockdomainsrenamer_liteethmac_state.00 0 0 0 
+clockdomainsrenamer_liteethmac_state.01 1 0 1 
+clockdomainsrenamer_liteethmac_state.10 1 1 0 
+
+State Machine - |de2_115_vga_platform|clockdomainsrenamer_liteethmac_fsm1_state1
+Name clockdomainsrenamer_liteethmac_fsm1_state1.11 clockdomainsrenamer_liteethmac_fsm1_state1.10 clockdomainsrenamer_liteethmac_fsm1_state1.01 clockdomainsrenamer_liteethmac_fsm1_state1.00 
+clockdomainsrenamer_liteethmac_fsm1_state1.00 0 0 0 0 
+clockdomainsrenamer_liteethmac_fsm1_state1.01 0 0 1 1 
+clockdomainsrenamer_liteethmac_fsm1_state1.10 0 1 0 1 
+clockdomainsrenamer_liteethmac_fsm1_state1.11 1 0 0 1 
+
+State Machine - |de2_115_vga_platform|clockdomainsrenamer_liteethmac_fsm2_state1
+Name clockdomainsrenamer_liteethmac_fsm2_state1.11 clockdomainsrenamer_liteethmac_fsm2_state1.10 clockdomainsrenamer_liteethmac_fsm2_state1.01 clockdomainsrenamer_liteethmac_fsm2_state1.00 
+clockdomainsrenamer_liteethmac_fsm2_state1.00 0 0 0 0 
+clockdomainsrenamer_liteethmac_fsm2_state1.01 0 0 1 1 
+clockdomainsrenamer_liteethmac_fsm2_state1.10 0 1 0 1 
+clockdomainsrenamer_liteethmac_fsm2_state1.11 1 0 0 1 
+
+State Machine - |de2_115_vga_platform|clockdomainsrenamer_liteethmac_fsm1_state0
+Name clockdomainsrenamer_liteethmac_fsm1_state0.11 clockdomainsrenamer_liteethmac_fsm1_state0.10 clockdomainsrenamer_liteethmac_fsm1_state0.01 clockdomainsrenamer_liteethmac_fsm1_state0.00 
+clockdomainsrenamer_liteethmac_fsm1_state0.00 0 0 0 0 
+clockdomainsrenamer_liteethmac_fsm1_state0.01 0 0 1 1 
+clockdomainsrenamer_liteethmac_fsm1_state0.10 0 1 0 1 
+clockdomainsrenamer_liteethmac_fsm1_state0.11 1 0 0 1 
+
+State Machine - |de2_115_vga_platform|clockdomainsrenamer_liteethmac_fsm0_state1
+Name clockdomainsrenamer_liteethmac_fsm0_state1.11 clockdomainsrenamer_liteethmac_fsm0_state1.10 clockdomainsrenamer_liteethmac_fsm0_state1.01 clockdomainsrenamer_liteethmac_fsm0_state1.00 
+clockdomainsrenamer_liteethmac_fsm0_state1.00 0 0 0 0 
+clockdomainsrenamer_liteethmac_fsm0_state1.01 0 0 1 1 
+clockdomainsrenamer_liteethmac_fsm0_state1.10 0 1 0 1 
+clockdomainsrenamer_liteethmac_fsm0_state1.11 1 0 0 1 
+
+State Machine - |de2_115_vga_platform|clockdomainsrenamer_liteethmac_fsm0_state0
+Name clockdomainsrenamer_liteethmac_fsm0_state0.11 clockdomainsrenamer_liteethmac_fsm0_state0.10 clockdomainsrenamer_liteethmac_fsm0_state0.01 clockdomainsrenamer_liteethmac_fsm0_state0.00 
+clockdomainsrenamer_liteethmac_fsm0_state0.00 0 0 0 0 
+clockdomainsrenamer_liteethmac_fsm0_state0.01 0 0 1 1 
+clockdomainsrenamer_liteethmac_fsm0_state0.10 0 1 0 1 
+clockdomainsrenamer_liteethmac_fsm0_state0.11 1 0 0 1 
+
+State Machine - |de2_115_vga_platform|clockdomainsrenamer_liteethmac_sel_ongoing
+Name clockdomainsrenamer_liteethmac_sel_ongoing.00 clockdomainsrenamer_liteethmac_sel_ongoing.10 clockdomainsrenamer_liteethmac_sel_ongoing.01 
+clockdomainsrenamer_liteethmac_sel_ongoing.00 0 0 0 
+clockdomainsrenamer_liteethmac_sel_ongoing.01 1 0 1 
+clockdomainsrenamer_liteethmac_sel_ongoing.10 1 1 0 
+
+State Machine - |de2_115_vga_platform|clockdomainsrenamer_liteethmac_liteethmacsramreader_state
+Name clockdomainsrenamer_liteethmac_liteethmacsramreader_state.00 clockdomainsrenamer_liteethmac_liteethmacsramreader_state.10 clockdomainsrenamer_liteethmac_liteethmacsramreader_state.01 
+clockdomainsrenamer_liteethmac_liteethmacsramreader_state.00 0 0 0 
+clockdomainsrenamer_liteethmac_liteethmacsramreader_state.01 1 0 1 
+clockdomainsrenamer_liteethmac_liteethmacsramreader_state.10 1 1 0 
+
+State Machine - |de2_115_vga_platform|clockdomainsrenamer_liteethmac_liteethmacsramwriter_state
+Name clockdomainsrenamer_liteethmac_liteethmacsramwriter_state.011 clockdomainsrenamer_liteethmac_liteethmacsramwriter_state.010 clockdomainsrenamer_liteethmac_liteethmacsramwriter_state.001 clockdomainsrenamer_liteethmac_liteethmacsramwriter_state.000 clockdomainsrenamer_liteethmac_liteethmacsramwriter_state.100 
+clockdomainsrenamer_liteethmac_liteethmacsramwriter_state.000 0 0 0 0 0 
+clockdomainsrenamer_liteethmac_liteethmacsramwriter_state.001 0 0 1 1 0 
+clockdomainsrenamer_liteethmac_liteethmacsramwriter_state.010 0 1 0 1 0 
+clockdomainsrenamer_liteethmac_liteethmacsramwriter_state.011 1 0 0 1 0 
+clockdomainsrenamer_liteethmac_liteethmacsramwriter_state.100 0 0 0 1 1 
+
+State Machine - |de2_115_vga_platform|litedramwishbone2native_fsm_state
+Name litedramwishbone2native_fsm_state.00 litedramwishbone2native_fsm_state.10 litedramwishbone2native_fsm_state.01 
+litedramwishbone2native_fsm_state.00 0 0 0 
+litedramwishbone2native_fsm_state.01 1 0 1 
+litedramwishbone2native_fsm_state.10 1 1 0 
+
+State Machine - |de2_115_vga_platform|fullmemorywe_state
+Name fullmemorywe_state.11 fullmemorywe_state.10 fullmemorywe_state.01 fullmemorywe_state.00 
+fullmemorywe_state.00 0 0 0 0 
+fullmemorywe_state.01 0 0 1 1 
+fullmemorywe_state.10 0 1 0 1 
+fullmemorywe_state.11 1 0 0 1 
+
+State Machine - |de2_115_vga_platform|multiplexer_state
+Name multiplexer_state.101 multiplexer_state.100 multiplexer_state.011 multiplexer_state.010 multiplexer_state.001 multiplexer_state.000 
+multiplexer_state.000 0 0 0 0 0 0 
+multiplexer_state.001 0 0 0 0 1 1 
+multiplexer_state.010 0 0 0 1 0 1 
+multiplexer_state.011 0 0 1 0 0 1 
+multiplexer_state.100 0 1 0 0 0 1 
+multiplexer_state.101 1 0 0 0 0 1 
+
+State Machine - |de2_115_vga_platform|de2_115vgamaster_sdram_choose_req_grant
+Name de2_115vgamaster_sdram_choose_req_grant.11 de2_115vgamaster_sdram_choose_req_grant.10 de2_115vgamaster_sdram_choose_req_grant.01 de2_115vgamaster_sdram_choose_req_grant.00 
+de2_115vgamaster_sdram_choose_req_grant.00 0 0 0 0 
+de2_115vgamaster_sdram_choose_req_grant.01 0 0 1 1 
+de2_115vgamaster_sdram_choose_req_grant.10 0 1 0 1 
+de2_115vgamaster_sdram_choose_req_grant.11 1 0 0 1 
+
+State Machine - |de2_115_vga_platform|de2_115vgamaster_sdram_choose_cmd_grant
+Name de2_115vgamaster_sdram_choose_cmd_grant.11 de2_115vgamaster_sdram_choose_cmd_grant.10 de2_115vgamaster_sdram_choose_cmd_grant.01 de2_115vgamaster_sdram_choose_cmd_grant.00 
+de2_115vgamaster_sdram_choose_cmd_grant.00 0 0 0 0 
+de2_115vgamaster_sdram_choose_cmd_grant.01 0 0 1 1 
+de2_115vgamaster_sdram_choose_cmd_grant.10 0 1 0 1 
+de2_115vgamaster_sdram_choose_cmd_grant.11 1 0 0 1 
+
+State Machine - |de2_115_vga_platform|bankmachine3_state
+Name bankmachine3_state.011 bankmachine3_state.010 bankmachine3_state.001 bankmachine3_state.000 bankmachine3_state.100 
+bankmachine3_state.000 0 0 0 0 0 
+bankmachine3_state.001 0 0 1 1 0 
+bankmachine3_state.010 0 1 0 1 0 
+bankmachine3_state.011 1 0 0 1 0 
+bankmachine3_state.100 0 0 0 1 1 
+
+State Machine - |de2_115_vga_platform|bankmachine2_state
+Name bankmachine2_state.011 bankmachine2_state.010 bankmachine2_state.001 bankmachine2_state.000 bankmachine2_state.100 
+bankmachine2_state.000 0 0 0 0 0 
+bankmachine2_state.001 0 0 1 1 0 
+bankmachine2_state.010 0 1 0 1 0 
+bankmachine2_state.011 1 0 0 1 0 
+bankmachine2_state.100 0 0 0 1 1 
+
+State Machine - |de2_115_vga_platform|bankmachine1_state
+Name bankmachine1_state.011 bankmachine1_state.010 bankmachine1_state.001 bankmachine1_state.000 bankmachine1_state.100 
+bankmachine1_state.000 0 0 0 0 0 
+bankmachine1_state.001 0 0 1 1 0 
+bankmachine1_state.010 0 1 0 1 0 
+bankmachine1_state.011 1 0 0 1 0 
+bankmachine1_state.100 0 0 0 1 1 
+
+State Machine - |de2_115_vga_platform|bankmachine0_state
+Name bankmachine0_state.011 bankmachine0_state.010 bankmachine0_state.001 bankmachine0_state.000 bankmachine0_state.100 
+bankmachine0_state.000 0 0 0 0 0 
+bankmachine0_state.001 0 0 1 1 0 
+bankmachine0_state.010 0 1 0 1 0 
+bankmachine0_state.011 1 0 0 1 0 
+bankmachine0_state.100 0 0 0 1 1 
+
+State Machine - |de2_115_vga_platform|refresher_state
+Name refresher_state.00 refresher_state.10 refresher_state.01 
+refresher_state.00 0 0 0 
+refresher_state.01 1 0 1 
+refresher_state.10 1 1 0 
+
+State Machine - |de2_115_vga_platform|grant
+Name grant.011 grant.010 grant.001 grant.000 grant.100 
+grant.000 0 0 0 0 0 
+grant.001 0 0 1 1 0 
+grant.010 0 1 0 1 0 
+grant.011 1 0 0 1 0 
+grant.100 0 0 0 1 1 
+
+State Machine - |de2_115_vga_platform|litescopeanalyzer0_state
+Name litescopeanalyzer0_state.11 litescopeanalyzer0_state.10 litescopeanalyzer0_state.01 litescopeanalyzer0_state.00 
+litescopeanalyzer0_state.00 0 0 0 0 
+litescopeanalyzer0_state.01 0 0 1 1 
+litescopeanalyzer0_state.10 0 1 0 1 
+litescopeanalyzer0_state.11 1 0 0 1 
+
+State Machine - |de2_115_vga_platform|clockdomainsrenamer_liteethmac_txdatapath_liteethmacpreambleinserter_state
+Name clockdomainsrenamer_liteethmac_txdatapath_liteethmacpreambleinserter_state.00 clockdomainsrenamer_liteethmac_txdatapath_liteethmacpreambleinserter_state.10 clockdomainsrenamer_liteethmac_txdatapath_liteethmacpreambleinserter_state.01 
+clockdomainsrenamer_liteethmac_txdatapath_liteethmacpreambleinserter_state.00 0 0 0 
+clockdomainsrenamer_liteethmac_txdatapath_liteethmacpreambleinserter_state.01 1 0 1 
+clockdomainsrenamer_liteethmac_txdatapath_liteethmacpreambleinserter_state.10 1 1 0 
+
+State Machine - |de2_115_vga_platform|clockdomainsrenamer_liteethmac_txdatapath_bufferizeendpoints_state
+Name clockdomainsrenamer_liteethmac_txdatapath_bufferizeendpoints_state.00 clockdomainsrenamer_liteethmac_txdatapath_bufferizeendpoints_state.10 clockdomainsrenamer_liteethmac_txdatapath_bufferizeendpoints_state.01 
+clockdomainsrenamer_liteethmac_txdatapath_bufferizeendpoints_state.00 0 0 0 
+clockdomainsrenamer_liteethmac_txdatapath_bufferizeendpoints_state.01 1 0 1 
+clockdomainsrenamer_liteethmac_txdatapath_bufferizeendpoints_state.10 1 1 0 
+
+State Machine - |de2_115_vga_platform|clockdomainsrenamer_liteethmac_rxdatapath_bufferizeendpoints_state
+Name clockdomainsrenamer_liteethmac_rxdatapath_bufferizeendpoints_state.11 clockdomainsrenamer_liteethmac_rxdatapath_bufferizeendpoints_state.10 clockdomainsrenamer_liteethmac_rxdatapath_bufferizeendpoints_state.01 clockdomainsrenamer_liteethmac_rxdatapath_bufferizeendpoints_state.00 
+clockdomainsrenamer_liteethmac_rxdatapath_bufferizeendpoints_state.00 0 0 0 0 
+clockdomainsrenamer_liteethmac_rxdatapath_bufferizeendpoints_state.01 0 0 1 1 
+clockdomainsrenamer_liteethmac_rxdatapath_bufferizeendpoints_state.10 0 1 0 1 
+clockdomainsrenamer_liteethmac_rxdatapath_bufferizeendpoints_state.11 1 0 0 1 
+
+State Machine - |de2_115_vga_platform|litescopeanalyzer1_state
+Name litescopeanalyzer1_state.11 litescopeanalyzer1_state.10 litescopeanalyzer1_state.01 litescopeanalyzer1_state.00 
+litescopeanalyzer1_state.00 0 0 0 0 
+litescopeanalyzer1_state.01 0 0 1 1 
+litescopeanalyzer1_state.10 0 1 0 1 
+litescopeanalyzer1_state.11 1 0 0 1 

@@ -8,6 +8,7 @@ module CY7C67200_IF(
     input  wire        iRST_N,
     input  wire        iCLK,
     output reg         oINT,
+
     inout  wire [15:0] HPI_DATA,
     output reg  [1:0]  HPI_ADDR,
     output reg         HPI_RD_N,
@@ -18,19 +19,23 @@ module CY7C67200_IF(
 );
 
     reg [15:0] tmp_data;
+    reg [2:0]  read_cycle_count;
 
     assign HPI_RST_N = iRST_N;
+
+    // Tri-state control
+    // Only drive the bus when we are explicitly writing.
     assign HPI_DATA = HPI_WR_N ? 16'hzzzz : tmp_data;
 
     always @(posedge iCLK or negedge iRST_N) begin
         if (!iRST_N) begin
+            oDATA    <= 32'd0;
+            oINT     <= 1'b0;
             tmp_data <= 16'd0;
-            HPI_ADDR <= 2'd0;
+            HPI_ADDR <= 2'b00;
             HPI_RD_N <= 1'b1;
             HPI_WR_N <= 1'b1;
             HPI_CS_N <= 1'b1;
-            oDATA    <= 32'd0;
-            oINT     <= 1'b0;
         end else begin
             oDATA    <= {16'h0000, HPI_DATA};
             oINT     <= HPI_INT;

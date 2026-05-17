@@ -19,6 +19,11 @@ _extra_io = [
     ("ping_hsync", 0, Pins("G13"), IOStandard("3.3-V LVTTL")), # Bank 8
     ("ping_vsync", 0, Pins("C13"), IOStandard("3.3-V LVTTL")), # Bank 8
 
+    ("serial", 0,
+        Subsignal("tx", Pins("G12"), IOStandard("3.3-V LVTTL")),
+        Subsignal("rx", Pins("G9"), IOStandard("3.3-V LVTTL"))
+    ),
+
     ("enet_clk", 0, Pins("A14"), IOStandard("3.3-V LVTTL")),
     # Dedicated 1000M GTX clocks. The base LiteX DE2-115 platform exposes
     # eth_clocks tx on ENETx_TX_CLK, which is the 10/100 clock pin. RGMII
@@ -176,11 +181,8 @@ _extra_io = [
         Subsignal("tx_data", Pins("C25 A26 B26 C26")),
         IOStandard("2.5 V")
     ),
-    ("serial_swapped", 0,
-        Subsignal("tx", Pins("G12"), IOStandard("3.3-V LVTTL")),
-        Subsignal("rx", Pins("G9"), IOStandard("3.3-V LVTTL"))
-    ),
 ]
+
 
 class Platform(BasePlatform):
     def __init__(self, *args, **kwargs):

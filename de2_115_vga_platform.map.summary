@@ -1,0 +1,14 @@
+Analysis & Synthesis Status : Successful - Fri May 15 06:04:24 2026
+Quartus Prime Version : 22.1std.2 Build 922 07/20/2023 SC Lite Edition
+Revision Name : de2_115_vga_platform
+Top-level Entity Name : de2_115_vga_platform
+Family : Cyclone IV E
+Total logic elements : 73,545
+    Total combinational functions : 48,721
+    Dedicated logic registers : 34,733
+Total registers : 34837
+Total pins : 232
+Total virtual pins : 0
+Total memory bits : 1,480,072
+Embedded Multiplier 9-bit elements : 8
+Total PLLs : 1
