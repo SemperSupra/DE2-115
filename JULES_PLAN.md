@@ -53,7 +53,7 @@ Action:
 - Review and refine the local on-FPGA HPI pad snapshot implementation when
   delegated. Earlier Jules review session: `14997796971249417694`.
 - Review the current post-board-swap HPI evidence and schematic/strap/VBUS
-  next-phase plan. Current Jules review session: `3912795874550261687`.
+  next-phase plan. Jules review session `3912795874550261687` completed.
 - Confirm whether debug register offsets `0x100` through `0x124` map correctly
   through LiteX/Etherbone to the bridge local debug words.
 - Confirm whether the snapshot count points are correct for address/data writes
@@ -71,6 +71,12 @@ Goal: restore basic HPI memory/control-register readback.
   LiteX SoC Build.
 - Current Jules output is advisory until any proposed change is gated locally
   through compile, programming, Ethernet, and HPI acceptance evidence.
+- Jules session `3912795874550261687` proposed a one-cycle HPI strobe-delay RTL
+  patch and a review note. Do not apply that patch as-is: it touched only the
+  mirrored `rtl/` bridge and is stale relative to the active root bridge, which
+  already uses explicit strobe gating and has board evidence. Treat the useful
+  part as confirmation to keep auditing reset, straps, VBUS, and physical
+  sideband conditions before more RTL churn.
 - Local execution owns Quartus compile, FPGA programming, Etherbone hardware
   tests, and board swaps across the four available DE2-115 boards.
 

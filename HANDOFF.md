@@ -40,10 +40,13 @@
   Static Checks and LiteX SoC Build both pass under manual dispatch.
 
 ## Next Steps for Codex CLI
-1.  **Review Jules feedback:** Jules session `3912795874550261687` is reviewing
-    the post-board-swap HPI evidence and schematic/strap/VBUS next-phase plan.
-    Earlier pad-capture review session `14997796971249417694` still had no
-    completed status in the CLI.
+1.  **Jules feedback:** Jules session `3912795874550261687` completed. It
+    proposed a one-cycle HPI strobe-delay patch and reinforced reset/strap/VBUS
+    audit tasks. Do not apply the RTL patch as-is: it only touched the mirrored
+    `rtl/` bridge and is stale relative to the active root bridge, which already
+    uses explicit strobe gating and has board evidence. Earlier pad-capture
+    review session `14997796971249417694` still had no completed status in the
+    CLI.
 2.  **Terasic demo or protocol review:** Second-board confirmation is complete:
     board A matches board B at the canonical readback failure. The next useful
     boundary is comparing against a known-good Terasic CY7C67200 USB demo
@@ -62,5 +65,5 @@
 - **Port:** `litex_server` target UDP 1234; host bind port 1235 for tests.
 - **UART:** COM3, 115200.
 - **Latest checkpoints:** `5426c17` records board-A confirmation; `372a84e`
-  records the reset/timing sweep. Current docs now point to the
-  schematic/strap/VBUS comparison phase.
+  records the reset/timing sweep; `bc6510e` documents the active
+  schematic/strap/VBUS orchestration phase.

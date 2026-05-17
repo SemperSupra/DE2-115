@@ -134,6 +134,11 @@ Successfully achieved local build parity with the known-good validation image. T
 - **Parallel delegation:** Jules session `3912795874550261687` was opened to
   review the evidence and schematic/strap/VBUS plan. GitHub Actions remains
   responsible for repository static checks and LiteX SoC generation.
+- **Jules result:** Session `3912795874550261687` completed and proposed a
+  one-cycle HPI strobe-delay RTL patch. That patch was not applied because it
+  touched only the mirrored `rtl/` bridge and is stale relative to the active
+  root bridge, which already has explicit strobe gating and board evidence.
+  Use the review as advisory support for reset/strap/VBUS audit work.
 - **Sequential local gates:** Physical demo rerun, any board-power/VBUS/jumper
   observation, FPGA programming, Ethernet, and HPI capture are local-only.
 - **Recommendation:** Do not change RTL again until the schematic/manual/demo

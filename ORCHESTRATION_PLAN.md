@@ -131,7 +131,7 @@ These must be sequential:
 | Second-board confirmation | Local bench | Done; board A matches board B |
 | Reset/timing sweep on board A | Local bench | Done; canonical still all zero |
 | Schematic/strap/VBUS audit doc | Local | Started in `docs/HPI_RESET_STRAP_AUDIT_20260517.md` |
-| Jules schematic/strap/VBUS review | Jules | Session `3912795874550261687` created |
+| Jules schematic/strap/VBUS review | Jules | Session `3912795874550261687` completed; RTL patch proposal rejected as stale/partial, review kept as advisory |
 | GitHub Actions delegation for branch head | Local/CI | Static Checks and LiteX SoC Build pass after each pushed checkpoint |
 | Terasic demo and schematic/VBUS/strap comparison | Local bench | Next local hardware task |
 
