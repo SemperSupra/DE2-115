@@ -65,8 +65,8 @@ Goal: restore basic HPI memory/control-register readback.
 - Jules should handle isolated RTL/script review and small patches.
 - Jules should not own hardware programming, Ethernet regression, or board
   swaps.
-- GitHub Actions now has manual dispatch enabled and passed Static Checks
-  `25988340470` plus LiteX SoC Build `25988340381`.
+- GitHub Actions now has manual dispatch enabled and passes Static Checks plus
+  LiteX SoC Build.
 - Local execution owns Quartus compile, FPGA programming, Etherbone hardware
   tests, and board swaps across the four available DE2-115 boards.
 

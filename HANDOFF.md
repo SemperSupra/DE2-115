@@ -28,7 +28,7 @@
 - **HPI Pad Capture:** Added on-FPGA 64-bit pad snapshots for canonical address
   write, data write, and data read.
 - **CI Delegation:** Added manual workflow dispatch and fixed stale CI gates.
-  Static Checks `25988340470` and LiteX SoC Build `25988340381` both pass.
+  Static Checks and LiteX SoC Build both pass under manual dispatch.
 
 ## Next Steps for Codex CLI
 1.  **Review Jules feedback:** Jules session `14997796971249417694` is reviewing
@@ -46,4 +46,4 @@
 - **Port:** `litex_server` target UDP 1234; host bind port 1235 for tests.
 - **UART:** COM3, 115200.
 - **Latest commits:** `f21b996` adds pad snapshots/orchestration; `359c92e`
-  enables manual CI dispatch; final handoff update is on this branch.
+  enables manual CI dispatch; final handoff updates are on this branch.
