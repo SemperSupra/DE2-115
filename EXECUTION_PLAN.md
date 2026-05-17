@@ -70,6 +70,25 @@ Goal: determine what the FPGA input buffers see on `OTG_DATA[15:0]` during the
 active HPI cycles. If this remains zero during a valid canonical read cycle,
 move to protocol/reset/strap comparison and board-swap checks.
 
+## 2026-05-17 Current Execution Boundary
+
+Board-swap and reset/timing paths are now complete:
+
+- Board B and board A both fail canonical HPI readback with the same
+  pad-facing evidence.
+- Board A still fails canonical Rung 1 under `spec`, `fast`, and `slow`
+  timing after a longer reset dwell.
+- LCP/SIE/HID work remains blocked.
+
+Next execution must stay in the schematic/strap/VBUS comparison phase:
+
+1. Audit DE2-115 schematic/manual collateral for CY7C67200 GPIO30/GPIO31 boot
+   straps, DACK/sideband nets, VBUS/host power enable, and jumpers.
+2. Rerun the Terasic USB host demo only while recording explicit board-power,
+   jumper, and VBUS observations.
+3. Resume canonical HPI Rung 1 only if that board-level evidence explains or
+   removes the all-zero readback.
+
 ### Action 1.2: Compare Against Terasic Demo
 
 Run a known-good Terasic USB demo bitstream on the same board if available.

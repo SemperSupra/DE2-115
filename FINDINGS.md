@@ -124,3 +124,18 @@ Successfully achieved local build parity with the known-good validation image. T
   boot-selection sideband pins to board straps.
 - **Next boundary:** Schematic/strap/VBUS audit and a Terasic demo rerun with
   explicit board-power/jumper observations. Do not run LCP/SIE/HID work.
+
+## 10. 2026-05-17 Next-Phase Orchestration
+- **Task relationship:** Board-swap confirmation and reset/timing sweeps are
+  complete prerequisites. The active dependency chain is now: document current
+  evidence, review schematic/strap/VBUS assumptions, rerun Terasic demo with
+  explicit board observations, then decide whether canonical HPI Rung 1 can be
+  resumed.
+- **Parallel delegation:** Jules session `3912795874550261687` was opened to
+  review the evidence and schematic/strap/VBUS plan. GitHub Actions remains
+  responsible for repository static checks and LiteX SoC generation.
+- **Sequential local gates:** Physical demo rerun, any board-power/VBUS/jumper
+  observation, FPGA programming, Ethernet, and HPI capture are local-only.
+- **Recommendation:** Do not change RTL again until the schematic/manual/demo
+  comparison either identifies a concrete board-level requirement or clears
+  the board-level configuration as a cause.

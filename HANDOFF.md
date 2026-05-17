@@ -40,8 +40,10 @@
   Static Checks and LiteX SoC Build both pass under manual dispatch.
 
 ## Next Steps for Codex CLI
-1.  **Review Jules feedback:** Jules session `14997796971249417694` is reviewing
-    the narrow pad-capture implementation and was still running at handoff.
+1.  **Review Jules feedback:** Jules session `3912795874550261687` is reviewing
+    the post-board-swap HPI evidence and schematic/strap/VBUS next-phase plan.
+    Earlier pad-capture review session `14997796971249417694` still had no
+    completed status in the CLI.
 2.  **Terasic demo or protocol review:** Second-board confirmation is complete:
     board A matches board B at the canonical readback failure. The next useful
     boundary is comparing against a known-good Terasic CY7C67200 USB demo
@@ -50,11 +52,15 @@
 3.  **Do not run LCP:** Rung 1 canonical memory write/read is not proven.
 4.  **Board swaps:** Four DE2-115 boards are available. Swap only after the
     same candidate SOF has a clear pass/fail on the first board.
+5.  **Delegation boundary:** GitHub Actions can run Static Checks and LiteX SoC
+    Build; Jules can review docs/RTL/scripts; Quartus programming, Ethernet,
+    HPI captures, and Terasic demo observations remain local-only.
 
 ## Environment
 - **Branch:** `ethernet-baseline-shim`
 - **Live image on board A:** `artifacts\de2_115_vga_platform_hpi_pad_capture_033626D0_20260517.sof`
 - **Port:** `litex_server` target UDP 1234; host bind port 1235 for tests.
 - **UART:** COM3, 115200.
-- **Latest commits:** `f21b996` adds pad snapshots/orchestration; `359c92e`
-  enables manual CI dispatch; final handoff updates are on this branch.
+- **Latest checkpoints:** `5426c17` records board-A confirmation; `372a84e`
+  records the reset/timing sweep. Current docs now point to the
+  schematic/strap/VBUS comparison phase.

@@ -20,6 +20,14 @@ Date: 2026-05-17
 - Prior Terasic host-demo isolation runs also failed on two boards: the Beagle
   saw connect/disconnect/reset indications, but no SOF or SETUP packets.
 
+## Reference Sources
+
+- Terasic DE2-115 user manual, USB OTG/HPI section:
+  `https://www.terasic.com.tw/wiki/images/f/f2/DE2_115_manual.pdf`
+- Cypress CY7C67200 datasheet, HPI boot mode and GPIO31/GPIO30 boot strap
+  behavior:
+  `https://www.digikey.at/htmldatasheets/production/290766/0/0/1/cy7c67200.html`
+
 ## Local Pin/Ownership Audit
 
 - The current LiteX platform assigns only documented DE2-115 OTG HPI pins:
@@ -63,3 +71,29 @@ The next useful local boundary is schematic and demo comparison:
    conditions, classify the DE2-115 CY7C67200 host path as systemically blocked
    for this project and choose whether to continue with HPI device-mode-only
    research or defer USB.
+
+## Delegation and Sequencing
+
+```mermaid
+sequenceDiagram
+    participant Local as Local Bench
+    participant Jules as Google Jules
+    participant CI as GitHub Actions
+    participant Board as DE2-115 Board
+
+    Local->>Local: Freeze board A/B and reset/timing evidence
+    par Reviewable work
+        Local->>Jules: Review schematic/strap/VBUS plan
+        Jules-->>Local: Advisory review or patch suggestion
+    and Automated repository gates
+        Local->>CI: Static Checks and LiteX SoC Build
+        CI-->>Local: Pass/fail status
+    end
+    Local->>Local: Audit manual/schematic for straps, VBUS, jumpers
+    Local->>Board: Rerun Terasic demo with explicit observations
+    alt Demo proves usable CY/HPI path
+        Local->>Board: Resume canonical HPI Rung 1
+    else Demo remains packet-silent
+        Local->>Local: Classify host path as systemically blocked
+    end
+```

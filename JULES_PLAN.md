@@ -51,7 +51,9 @@ HPI0 read_data: rst=0 hpi_rst_n=1 cs_n=0 rd_n=0 wr_n=1 addr=0 data=0000
 Action:
 
 - Review and refine the local on-FPGA HPI pad snapshot implementation when
-  delegated. Current Jules review session: `14997796971249417694`.
+  delegated. Earlier Jules review session: `14997796971249417694`.
+- Review the current post-board-swap HPI evidence and schematic/strap/VBUS
+  next-phase plan. Current Jules review session: `3912795874550261687`.
 - Confirm whether debug register offsets `0x100` through `0x124` map correctly
   through LiteX/Etherbone to the bridge local debug words.
 - Confirm whether the snapshot count points are correct for address/data writes
@@ -62,11 +64,13 @@ Goal: restore basic HPI memory/control-register readback.
 
 ### Current Delegation Boundaries
 
-- Jules should handle isolated RTL/script review and small patches.
+- Jules should handle isolated RTL/script/doc review and small patches.
 - Jules should not own hardware programming, Ethernet regression, or board
   swaps.
 - GitHub Actions now has manual dispatch enabled and passes Static Checks plus
   LiteX SoC Build.
+- Current Jules output is advisory until any proposed change is gated locally
+  through compile, programming, Ethernet, and HPI acceptance evidence.
 - Local execution owns Quartus compile, FPGA programming, Etherbone hardware
   tests, and board swaps across the four available DE2-115 boards.
 

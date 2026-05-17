@@ -26,38 +26,45 @@ Date: 2026-05-17
 - A board-A reset/timing sweep with longer reset dwell still failed canonical
   Rung 1 under `spec`, `fast`, and `slow` timing. Spec and slow pad snapshots
   also sampled `0x0000` on canonical reads.
+- Prior Terasic host-demo isolation notes already show no SOF/SETUP traffic on
+  two boards. The next useful question is therefore not "can LCP run?", but
+  whether the DE2-115 CY7C67200 board configuration, VBUS/host power, or boot
+  straps put the device into a usable HPI/host state.
 
 ## Delegation Model
 
 | Work item | Best executor | Why |
 | --- | --- | --- |
-| Review narrow RTL/script pad-capture patch | Google Jules | Isolated code review can run independently and does not need board access. |
+| Review current HPI evidence and schematic/strap/VBUS plan | Google Jules | Isolated design/doc review can run independently and does not need board access. |
 | Python syntax checks and repository static checks | GitHub Actions | Pure software checks are repeatable and do not require DE2-115 hardware. |
 | LiteX SoC generation in Docker | GitHub Actions or local Docker | No board access required; good CI gate before hardware compile. |
-| Quartus full compile | Local Windows host | Requires installed Quartus; GitHub hosted runners do not have this setup. |
+| Markdown/status/handoff updates | Local Codex | Needs the current bench state and must avoid stale hardware conclusions. |
+| Quartus full compile, if RTL changes resume | Local Windows host | Requires installed Quartus; GitHub hosted runners do not have this setup. |
 | Programming FPGA | Local Windows host | Requires USB-Blaster and physical board. |
 | Ethernet regression | Local bench | Requires programmed board and network path to `192.168.178.50`. |
-| HPI pad snapshot run | Local bench | Requires programmed pad-capture SOF and Etherbone. |
-| Board swaps across the four DE2-115 boards | Local bench | Physical operation; only after image-level evidence justifies it. |
+| HPI pad snapshot / ladder runs | Local bench | Requires programmed pad-capture SOF and Etherbone. |
+| Terasic demo rerun with jumper/VBUS observations | Local bench | Requires physical board, USB path, and observation of board power/jumper state. |
+| Board swaps across the four DE2-115 boards | Local bench | Physical operation; board A and board B already match at the failure boundary. |
 
 ## Dependency Graph
 
 ```mermaid
 graph TD
-    A[Document current status and plan] --> B[Jules reviews pad-capture patch]
-    A --> C[Implement local pad-capture RTL/script]
-    C --> D[Python syntax and HPI bridge simulation]
-    C --> E[SoC generation / CI static checks]
-    D --> F[Quartus compile on Windows]
-    E --> F
-    F --> G[Program one board with candidate SOF]
-    G --> H[Ethernet regression gate]
-    H --> I[Run HPI pad snapshot over Etherbone]
-    I --> J{Canonical HPI read returns expected data?}
-    J -- yes --> K[Proceed to LCP / COMM_ACK ladder]
-    J -- no --> L[Board A reproduces board B failure]
-    L --> M[Compare against Terasic demo]
-    M --> N[Protocol / reset / strap root-cause path]
+    A[Board B pad snapshot: canonical read zero] --> B[Board A same SOF]
+    B --> C[Ethernet/Etherbone gate passes]
+    C --> D[Board A pad snapshot: canonical read zero]
+    D --> E[Reset/timing sweep: spec fast slow all fail]
+    E --> F[Classify basic board swap and timing paths exhausted]
+    F --> G[Document schematic/strap/VBUS plan]
+    F --> H[Jules evidence and plan review]
+    F --> I[GitHub Actions static and SoC checks]
+    G --> J[Local schematic/manual audit: straps VBUS jumpers]
+    H --> J
+    I --> J
+    J --> K[Local Terasic demo rerun with explicit jumper/VBUS observations]
+    K --> L{Demo emits SOF/SETUP and HPI Rung 1 can pass?}
+    L -- yes --> M[Resume canonical HPI Rung 1 then LCP gate]
+    L -- no --> N[Classify CY7C67200 host path as systemically blocked or choose alternate USB path]
 ```
 
 ## Sequencing Diagram
@@ -69,31 +76,24 @@ sequenceDiagram
     participant CI as GitHub Actions
     participant Board as DE2-115 Board
 
-    Local->>Local: Update docs and implement pad-capture RTL/script
+    Local->>Board: Program board A with checksum 0x033626D0
+    Board-->>Local: Ethernet/Etherbone pass
+    Local->>Board: Run canonical pad captures and reset/timing sweep
+    Board-->>Local: Canonical writes visible, reads remain 0x0000
+    Local->>Local: Document two-board plus timing-sweep failure boundary
     par Independent review
-        Local->>Jules: Request focused pad-capture review
-        Jules-->>Local: Review notes or narrow patch
-    and Software/CI gates
-        Local->>CI: Push/trigger static and SoC-generation checks
-        CI-->>Local: Python/build status
-    and Local syntax/simulation
-        Local->>Local: py_compile and HPI bridge simulation
+        Local->>Jules: Request schematic/strap/VBUS plan review
+        Jules-->>Local: Review notes or patch suggestions
+    and Repository gates
+        Local->>CI: Trigger Static Checks and LiteX SoC Build
+        CI-->>Local: Pass/fail status
     end
-    Local->>Local: Quartus compile candidate SOF
-    Local->>Board: Program candidate image
-    Board-->>Local: FPGA configured
-    Local->>Board: Ethernet regression
-    alt Ethernet passes
-        Local->>Board: Run HPI pad snapshot
-        Board-->>Local: Address/write/read pad-facing samples
-    else Ethernet fails
-        Local->>Board: Restore validated SOF
-        Local->>Local: Fix build before USB testing
-    end
-    alt Pad snapshot shows design-level failure on two boards
-        Local->>Board: Compare against Terasic demo behavior
-    else Pad snapshot passes Rung 1
-        Local->>Board: Resume LCP/COMM_ACK ladder
+    Local->>Local: Audit DE2-115 schematic/manual for GPIO30/GPIO31, DACK, VBUS, jumpers
+    Local->>Board: Rerun Terasic USB host demo with explicit board-power/jumper/VBUS notes
+    alt Terasic demo and canonical HPI become valid
+        Local->>Board: Resume canonical Rung 1 then LCP/COMM_ACK gate
+    else Terasic demo still emits no SOF/SETUP
+        Local->>Local: Classify CY7C67200 host path as systemic board/configuration blocker
     end
 ```
 
@@ -101,21 +101,20 @@ sequenceDiagram
 
 These can run in parallel:
 
-- Jules review of `cy7c67200_wb_bridge.v` and `scripts/hpi_pad_capture_debug.py`.
+- Jules review of the HPI evidence and schematic/strap/VBUS plan.
 - GitHub Actions static checks and Docker SoC generation.
-- Local Python syntax checks and HPI bridge simulation.
 - Documentation updates, because they do not affect generated hardware.
+- Locating external schematic/manual/demo collateral, provided the local bench
+  state is not changed.
 
 These must be sequential:
 
-- Quartus compile must wait for accepted RTL/source changes.
-- FPGA programming must wait for Quartus compile.
-- Ethernet regression must wait for programming.
-- HPI pad snapshot must wait for Ethernet/Etherbone passing on the candidate
-  image.
+- Any new Quartus compile must wait for accepted source changes.
+- FPGA programming must wait for a selected SOF/demo image.
+- Ethernet regression must wait for programming when using the LiteX image.
+- HPI pad snapshot must wait for Ethernet/Etherbone passing on the candidate image.
+- Terasic demo rerun must wait for schematic/jumper/VBUS observation criteria.
 - LCP/SIE/HID work must wait for canonical HPI Rung 1 passing.
-- Board swaps should wait until the same candidate image has a clear pass/fail
-  on one board.
 
 ## Execution State
 
@@ -131,7 +130,10 @@ These must be sequential:
 | Hardware program/regression/snapshot | Local bench | Done on board B and board A; canonical read still samples zero |
 | Second-board confirmation | Local bench | Done; board A matches board B |
 | Reset/timing sweep on board A | Local bench | Done; canonical still all zero |
-| Terasic demo and schematic/VBUS/strap comparison | Local bench | Next sequential task |
+| Schematic/strap/VBUS audit doc | Local | Started in `docs/HPI_RESET_STRAP_AUDIT_20260517.md` |
+| Jules schematic/strap/VBUS review | Jules | Session `3912795874550261687` created |
+| GitHub Actions delegation for branch head | Local/CI | Static Checks and LiteX SoC Build pass after each pushed checkpoint |
+| Terasic demo and schematic/VBUS/strap comparison | Local bench | Next local hardware task |
 
 ## Recommendations
 
