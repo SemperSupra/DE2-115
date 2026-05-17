@@ -1,6 +1,7 @@
 name: LiteX SoC Build
 
 on:
+  workflow_dispatch:
   push:
     branches: [ main, ethernet-baseline-shim ]
   pull_request:
