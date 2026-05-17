@@ -144,3 +144,38 @@ Successfully achieved local build parity with the known-good validation image. T
 - **Recommendation:** Do not change RTL again until the schematic/manual/demo
   comparison either identifies a concrete board-level requirement or clears
   the board-level configuration as a cause.
+
+## 11. 2026-05-17 Terasic USB Host Demo Audit Attempt
+- **Reference package:** `DE2_115_demonstrations/DE2_115_NIOS_HOST_MOUSE_VGA`.
+- **Demo flow:** `demo_batch/nios_host_mouse_vga.bat` programs
+  `DE2_115_NIOS_HOST_MOUSE_VGA.sof`, then `demo_batch/test_bashrc` downloads
+  `DE2_115_NIOS_HOST_MOUSE_VGA.elf` with `nios2-download ... -r -g` and opens
+  `nios2-terminal`.
+- **Pin comparison:** The Terasic QSF uses the same primary HPI pins
+  (`OTG_DATA[15:0]`, `OTG_ADDR[1:0]`, `OTG_CS_N`, `OTG_RD_N`, `OTG_WR_N`,
+  `OTG_INT`, `OTG_RST_N`). It also assigns `GPIO[30]`/`GPIO[31]` to FPGA pins
+  `AE20`/`AG23`, but the top-level host-demo USB block does not expose those
+  GPIOs as HPI control ports in the inspected source. `OTG_DREQ[0]` is assigned
+  in the QSF, but it is not used by the top-level host-demo port list.
+- **Reset comparison:** The Terasic reset PIO starts low and is released by
+  Nios software. Our LiteX reset/debug path can also hold reset low and release
+  it high; the board-A reset dwell sweep did not rescue canonical readback.
+- **Software comparison:** Terasic software performs HPI-level reset and SIE
+  setup after the Nios ELF is running. This remains beyond our LiteX ladder
+  until Rung 1 memory/register readback is proven.
+- **Hardware action:** Board A was programmed with the Terasic SOF successfully
+  over USB-Blaster. It was then restored to
+  `artifacts/de2_115_vga_platform_hpi_pad_capture_033626D0_20260517.sof`.
+- **Container attempt:** Per user direction, the ELF step was attempted from
+  the existing Docker `litex_builder` container rather than WSL. The container
+  sees the mounted Intel Nios script and the Terasic ELF/JDI, but it does not
+  see USB/JTAG devices and the mounted Nios cross tools are Windows executables
+  from the host Quartus install. `nios2-download --help` runs, but the actual
+  download fails before hardware access because the script detects the Docker
+  Desktop WSL2 kernel, switches into WSL path handling, and then cannot run the
+  Windows-only helper tools from Linux.
+- **Conclusion:** The Terasic demo cannot currently be completed from the
+  container with the mounted Windows Quartus tree. To run it without direct WSL,
+  we need either native Linux Intel/Nios tools in the container plus USB-Blaster
+  passthrough, or a host-side Windows Nios download flow. This is an execution
+  environment blocker, not new evidence that the CY7C67200 host path works.

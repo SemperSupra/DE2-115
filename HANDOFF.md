@@ -27,6 +27,19 @@
       `fast`, and `slow` timing after a longer reset dwell (`0.5 s` low,
       `2.0 s` high). Spec and slow pad captures also sampled read data as
       `0x0000`.
+- **Terasic USB Host Demo:** **SOF programmed, ELF step blocked**.
+    - Board A accepted
+      `DE2_115_demonstrations\DE2_115_NIOS_HOST_MOUSE_VGA\DE2_115_NIOS_HOST_MOUSE_VGA.sof`
+      over USB-Blaster.
+    - The reference demo requires a second Nios application download:
+      `nios2-download DE2_115_NIOS_HOST_MOUSE_VGA.elf -r -g`, followed by
+      `nios2-terminal`.
+    - Per user direction, the ELF step was attempted in Docker instead of WSL.
+      The existing `litex_builder` container sees the mounted Windows Nios tree
+      and ELF/JDI, but lacks USB/JTAG device visibility and native Linux Nios
+      helper binaries. The actual download path fails before hardware access.
+    - Board A has been restored to the candidate pad-capture image checksum
+      `0x033626D0`.
 
 ## Key Changes
 - **ROM Size:** Permanently increased to 64 KiB (`0x10000`) to fit BIOS + firmware.
@@ -49,15 +62,18 @@
     CLI.
 2.  **Terasic demo or protocol review:** Second-board confirmation is complete:
     board A matches board B at the canonical readback failure. The next useful
-    boundary is comparing against a known-good Terasic CY7C67200 USB demo
-    bitstream with explicit board-power/jumper/VBUS observations, plus auditing
-    the HPI reset/strap/protocol assumptions.
+    boundary is completing the Terasic demo ELF download path, then comparing
+    against the known-good CY7C67200 USB host demo with explicit
+    board-power/jumper/VBUS observations, plus auditing the HPI
+    reset/strap/protocol assumptions.
 3.  **Do not run LCP:** Rung 1 canonical memory write/read is not proven.
 4.  **Board swaps:** Four DE2-115 boards are available. Swap only after the
     same candidate SOF has a clear pass/fail on the first board.
 5.  **Delegation boundary:** GitHub Actions can run Static Checks and LiteX SoC
-    Build; Jules can review docs/RTL/scripts; Quartus programming, Ethernet,
-    HPI captures, and Terasic demo observations remain local-only.
+    Build; Jules can review docs/RTL/scripts; Docker can build LiteX/SoC but
+    cannot currently execute the Terasic Nios ELF download; Quartus
+    programming, Ethernet, HPI captures, and Terasic demo observations remain
+    local-only.
 
 ## Environment
 - **Branch:** `ethernet-baseline-shim`
@@ -66,4 +82,5 @@
 - **UART:** COM3, 115200.
 - **Latest checkpoints:** `5426c17` records board-A confirmation; `372a84e`
   records the reset/timing sweep; `bc6510e` documents the active
-  schematic/strap/VBUS orchestration phase.
+  schematic/strap/VBUS orchestration phase. This handoff now also records the
+  Terasic SOF/ELF/container blocker.

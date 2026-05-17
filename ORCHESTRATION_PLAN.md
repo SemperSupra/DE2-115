@@ -44,6 +44,7 @@ Date: 2026-05-17
 | Ethernet regression | Local bench | Requires programmed board and network path to `192.168.178.50`. |
 | HPI pad snapshot / ladder runs | Local bench | Requires programmed pad-capture SOF and Etherbone. |
 | Terasic demo rerun with jumper/VBUS observations | Local bench | Requires physical board, USB path, and observation of board power/jumper state. |
+| Terasic Nios ELF download | Local bench / special container | Sequential after SOF programming. The current Docker image is blocked because it has no USB/JTAG device visibility and only mounts Windows Nios helper binaries. |
 | Board swaps across the four DE2-115 boards | Local bench | Physical operation; board A and board B already match at the failure boundary. |
 
 ## Dependency Graph
@@ -61,8 +62,10 @@ graph TD
     G --> J[Local schematic/manual audit: straps VBUS jumpers]
     H --> J
     I --> J
-    J --> K[Local Terasic demo rerun with explicit jumper/VBUS observations]
-    K --> L{Demo emits SOF/SETUP and HPI Rung 1 can pass?}
+    J --> K[Program Terasic SOF]
+    K --> K2[Download Terasic Nios ELF]
+    K2 --> K3[Observe host demo with explicit jumper/VBUS notes]
+    K3 --> L{Demo emits SOF/SETUP and HPI Rung 1 can pass?}
     L -- yes --> M[Resume canonical HPI Rung 1 then LCP gate]
     L -- no --> N[Classify CY7C67200 host path as systemically blocked or choose alternate USB path]
 ```
@@ -89,7 +92,9 @@ sequenceDiagram
         CI-->>Local: Pass/fail status
     end
     Local->>Local: Audit DE2-115 schematic/manual for GPIO30/GPIO31, DACK, VBUS, jumpers
-    Local->>Board: Rerun Terasic USB host demo with explicit board-power/jumper/VBUS notes
+    Local->>Board: Program Terasic USB host demo SOF
+    Local->>Board: Download Terasic Nios ELF
+    Local->>Board: Observe demo with explicit board-power/jumper/VBUS notes
     alt Terasic demo and canonical HPI become valid
         Local->>Board: Resume canonical Rung 1 then LCP/COMM_ACK gate
     else Terasic demo still emits no SOF/SETUP
@@ -114,6 +119,8 @@ These must be sequential:
 - Ethernet regression must wait for programming when using the LiteX image.
 - HPI pad snapshot must wait for Ethernet/Etherbone passing on the candidate image.
 - Terasic demo rerun must wait for schematic/jumper/VBUS observation criteria.
+- Terasic Nios ELF download must wait for a usable JTAG/Nios execution
+  environment. The current Docker container is not enough.
 - LCP/SIE/HID work must wait for canonical HPI Rung 1 passing.
 
 ## Execution State
@@ -133,7 +140,9 @@ These must be sequential:
 | Schematic/strap/VBUS audit doc | Local | Started in `docs/HPI_RESET_STRAP_AUDIT_20260517.md` |
 | Jules schematic/strap/VBUS review | Jules | Session `3912795874550261687` completed; RTL patch proposal rejected as stale/partial, review kept as advisory |
 | GitHub Actions delegation for branch head | Local/CI | Static Checks and LiteX SoC Build pass after each pushed checkpoint |
-| Terasic demo and schematic/VBUS/strap comparison | Local bench | Next local hardware task |
+| Terasic SOF programming | Local bench | Done on board A; SOF accepted over USB-Blaster |
+| Terasic Nios ELF download | Local bench/container | Blocked in current Docker image: no USB/JTAG passthrough and mounted Nios helper tools are Windows binaries |
+| Terasic demo and schematic/VBUS/strap comparison | Local bench | Waiting on usable Nios ELF download path |
 
 ## Recommendations
 
@@ -147,3 +156,5 @@ These must be sequential:
 5. Reset/timing sweeps did not rescue canonical HPI; prioritize schematic,
    VBUS, jumper, and boot-strap evidence before any more RTL churn.
 6. Do not resume LCP until canonical memory write/read returns expected data.
+7. Do not treat "Terasic SOF programmed" as a completed host-demo run; the
+   prebuilt demo also needs the Nios ELF download and terminal step.

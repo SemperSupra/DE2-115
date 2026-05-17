@@ -40,6 +40,51 @@ Date: 2026-05-17
 - `CY7C67200_IF.v` only drives `HPI_DATA` when `HPI_WR_N` is low. During reads
   it tri-states the FPGA side of the bus.
 
+## Terasic Host Demo Audit
+
+- Local reference package:
+  `DE2_115_demonstrations/DE2_115_NIOS_HOST_MOUSE_VGA`.
+- The Terasic batch flow is two-stage: program
+  `DE2_115_NIOS_HOST_MOUSE_VGA.sof`, then run `nios2-download` on
+  `DE2_115_NIOS_HOST_MOUSE_VGA.elf` and attach `nios2-terminal`.
+- The Terasic QSF assigns the same primary CY7C67200 HPI pins used by the
+  current LiteX design. It also assigns `GPIO[30]` and `GPIO[31]` to pins
+  `AE20` and `AG23`, but those GPIOs are not exposed in the inspected
+  top-level USB host-demo port list.
+- The Terasic reset component initializes reset low and expects Nios software
+  to release the CY7C67200 later. Our reset dwell testing already covers a
+  comparable hold-low/release-high boundary.
+- The Terasic software's `UsbSoftReset()` and SIE setup are post-HPI operations.
+  They are useful reference behavior, but they should not be ported into the
+  LiteX ladder until canonical HPI Rung 1 readback works.
+
+## 2026-05-17 Demo Execution Attempt
+
+- Board A successfully accepted the Terasic SOF over USB-Blaster.
+- The Nios ELF/application step was not completed. Per user direction the
+  attempt was made in the Docker container instead of direct WSL.
+- The existing `litex_builder` container sees the mounted Windows Quartus/Nios
+  tree and the Terasic ELF/JDI, but it has no visible `/dev/bus/usb` devices.
+- The mounted Nios helper binaries are from the Windows Quartus installation.
+  The Linux container can run the shell wrapper far enough to print help, but
+  the actual download path fails because the wrapper detects the Docker Desktop
+  WSL2 kernel and then expects WSL path helpers and Windows `.exe` tools.
+- Board A was restored to the candidate pad-capture image
+  `artifacts/de2_115_vga_platform_hpi_pad_capture_033626D0_20260517.sof`
+  after this attempt.
+
+## Environment Requirement To Finish Demo
+
+To complete the Terasic host demo without direct WSL, use one of these paths:
+
+1. Build or provide a container image with native Linux Intel Quartus/Nios tools
+   and pass the USB-Blaster device through to the container.
+2. Use the host Windows Nios tools directly for `nios2-download` and
+   `nios2-terminal`.
+
+The current Docker setup is sufficient for LiteX/SoC builds, but not sufficient
+for the Terasic Nios ELF download.
+
 ## Interpretation
 
 The FPGA side now has enough evidence to show that canonical write cycles and
@@ -65,8 +110,8 @@ The next useful local boundary is schematic and demo comparison:
 1. Identify CY7C67200 GPIO30/GPIO31 boot strap nets, DACK/sideband nets,
    VBUS/host power enable, and any jumpers or solder options in the DE2-115
    schematic/manual.
-2. Re-run the Terasic USB host demo only with explicit board-power/jumper/VBUS
-   observations recorded.
+2. Re-run the Terasic USB host demo only after the Nios ELF download path is
+   available, with explicit board-power/jumper/VBUS observations recorded.
 3. If the Terasic demo still emits no SOF/SETUP under confirmed power/strap
    conditions, classify the DE2-115 CY7C67200 host path as systemically blocked
    for this project and choose whether to continue with HPI device-mode-only
